@@ -1,0 +1,29 @@
+{
+  "name": "outbreaksense-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OutbreakSense AI monorepo (backend + web + AI engine)",
+  "workspaces": [
+    "backend",
+    "web"
+  ],
+  "scripts": {
+    "start": "concurrently -n backend,web,ai -c green,magenta,cyan \"npm run start:backend\" \"npm run start:web\" \"npm run start:ai\"",
+    "dev": "npm run start",
+    "start:non-mobile": "npm run start",
+    "start:backend": "npm --prefix backend run start",
+    "start:web": "npm --prefix web run dev",
+    "start:ai": "node scripts/run-ai-engine.cjs",
+    "build:web": "npm --prefix web run build",
+    "preview:web": "npm --prefix web run preview -- --host 0.0.0.0 --port 4173",
+    "start:app": "npm --prefix NH-S19-App run start",
+    "start:app:clear": "npm --prefix NH-S19-App run start:clear",
+    "start:mobile": "npm run start:app",
+    "start:mobile:tunnel": "npm --prefix NH-S19-App run start:tunnel",
+    "start:backend+app": "node scripts/start-backend-mobile.cjs",
+    "start:backend+mobile": "npm run start:backend+app"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

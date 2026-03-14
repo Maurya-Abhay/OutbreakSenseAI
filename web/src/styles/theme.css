@@ -1,0 +1,181 @@
+.dashboard-shell {
+  background:
+    radial-gradient(circle at 10% -5%, rgba(59, 130, 246, 0.2), transparent 36%),
+    radial-gradient(circle at 88% -8%, rgba(20, 184, 166, 0.16), transparent 30%),
+    radial-gradient(circle at 50% 120%, rgba(245, 158, 11, 0.08), transparent 32%),
+    linear-gradient(180deg, #f8fbff 0%, #edf4ff 100%);
+}
+
+.dark .dashboard-shell {
+  background:
+    radial-gradient(circle at 12% -8%, rgba(56, 189, 248, 0.2), transparent 34%),
+    radial-gradient(circle at 90% 0%, rgba(45, 212, 191, 0.17), transparent 30%),
+    radial-gradient(circle at 50% 115%, rgba(245, 158, 11, 0.08), transparent 34%),
+    linear-gradient(180deg, #081224 0%, #0e1c34 100%);
+}
+
+.sidebar-glass {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+}
+
+.dark .sidebar-glass {
+  background: rgba(12, 23, 44, 0.78);
+}
+
+.saas-panel {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(203, 213, 225, 0.88);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 26px 52px -34px rgba(15, 23, 42, 0.34);
+  backdrop-filter: blur(16px);
+}
+
+.dark .saas-panel {
+  border-color: rgba(71, 85, 105, 0.8);
+  background: rgba(15, 27, 50, 0.76);
+  box-shadow: 0 26px 52px -34px rgba(2, 6, 23, 0.62);
+}
+
+.saas-subpanel {
+  border: 1px solid rgba(203, 213, 225, 0.88);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 16px 34px -28px rgba(15, 23, 42, 0.28);
+}
+
+.dark .saas-subpanel {
+  border-color: rgba(71, 85, 105, 0.78);
+  background: rgba(15, 23, 42, 0.64);
+  box-shadow: 0 16px 34px -26px rgba(2, 6, 23, 0.56);
+}
+
+.saas-chip {
+  border: 1px solid rgba(203, 213, 225, 0.92);
+  background: rgba(248, 250, 252, 0.9);
+  color: rgb(71 85 105);
+}
+
+.dark .saas-chip {
+  border-color: rgba(71, 85, 105, 0.82);
+  background: rgba(15, 23, 42, 0.76);
+  color: rgb(203 213 225);
+}
+
+.saas-heading {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: rgb(15 23 42);
+}
+
+.dark .saas-heading {
+  color: rgb(248 250 252);
+}
+
+.saas-muted {
+  font-size: 0.875rem;
+  color: rgb(71 85 105);
+}
+
+.dark .saas-muted {
+  color: rgb(148 163 184);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(120deg, #2563eb, #0ea5e9 52%, #14b8a6);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ffffff;
+  box-shadow: 0 14px 30px -18px rgba(37, 99, 235, 0.72);
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(203 213 225);
+  background: rgba(255, 255, 255, 0.86);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(51 65 85);
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.btn-ghost:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(239, 246, 255, 0.95);
+  color: rgb(30 64 175);
+}
+
+.dark .btn-ghost {
+  border-color: rgb(71 85 105);
+  background: rgba(15, 27, 50, 0.82);
+  color: rgb(226 232 240);
+}
+
+.dark .btn-ghost:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(30, 41, 59, 0.95);
+  color: rgb(186 230 253);
+}
+
+.field-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgb(71 85 105);
+}
+
+.dark .field-label {
+  color: rgb(148 163 184);
+}
+
+.field-input {
+  margin-top: 0.35rem;
+  display: block;
+  height: 2.5rem;
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(203 213 225);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(51 65 85);
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.field-input::placeholder {
+  color: rgb(148 163 184);
+}
+
+.field-input:focus {
+  border-color: rgba(14, 165, 233, 0.85);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.18);
+}
+
+.dark .field-input {
+  border-color: rgb(71 85 105);
+  background: rgba(15, 27, 50, 0.86);
+  color: rgb(226 232 240);
+}
+
+.dark .field-input::placeholder {
+  color: rgb(100 116 139);
+}

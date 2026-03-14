@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OutbreakSense AI</title>
+    <meta
+      name="description"
+      content="AI-powered multi-disease outbreak monitoring platform with realtime alerts, risk heatmaps, and citizen reporting for early response."
+    />
+    <meta
+      name="keywords"
+      content="disease outbreak monitoring, outbreak prediction, healthtech, epidemiology, risk heatmap, realtime alerts, public health AI"
+    />
+    <meta name="author" content="OutbreakSense AI" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#1768ac" />
+    <link rel="canonical" href="https://nh-s19.example.com/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="OutbreakSense AI" />
+    <meta
+      property="og:description"
+      content="Monitor neighborhood disease outbreak risk, receive realtime alerts, and submit citizen reports through a modern health intelligence dashboard."
+    />
+    <meta property="og:url" content="https://nh-s19.example.com/" />
+    <meta property="og:image" content="/og-image.svg" />
+    <meta property="og:site_name" content="OutbreakSense AI" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="OutbreakSense AI" />
+    <meta
+      name="twitter:description"
+      content="Realtime disease outbreak intelligence platform for citizens and public health teams."
+    />
+    <meta name="twitter:image" content="/og-image.svg" />
+
+    <script>
+      (function applyStoredTheme() {
+        const storageKey = "nhs19_theme";
+        const storedTheme = localStorage.getItem(storageKey);
+        const theme =
+          storedTheme === "dark" || storedTheme === "light"
+            ? storedTheme
+            : window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

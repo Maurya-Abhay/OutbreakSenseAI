@@ -1,0 +1,49 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Sora:wght@500;600;700&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #10223f;
+  background-color: #f4f8ff;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "DM Sans", sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+html.dark body,
+body.dark {
+  color: #e6eefb;
+  background-color: #061125;
+}
+
+.status-low {
+  @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300;
+}
+
+.status-medium {
+  @apply bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300;
+}
+
+.status-high {
+  @apply bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300;
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
