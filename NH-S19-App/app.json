@@ -7,13 +7,11 @@
     "userInterfaceStyle": "dark",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1f2937"
     },
     "android": {
       "package": "com.outbreaksense.ai",
-      "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
-      }
+      "versionCode": 1
     },
     "extra": {
       "eas": {
