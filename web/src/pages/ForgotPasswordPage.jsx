@@ -1,0 +1,278 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import api from "../api/client";
+
+const ForgotPasswordPage = () => {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const handleSendOTP = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!email.trim()) {
+      setError("Please enter your email address");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.post("/auth/forgot-password", { email: email.toLowerCase() });
+      setSuccess("OTP sent to your email. Check your inbox!");
+      setTimeout(() => navigate("/verify-otp", { state: { email: email.toLowerCase() } }), 1500);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to send OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-4 dark:bg-[#020617]">
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-10%] h-[40%] w-[40%] rounded-full bg-indigo-500/10 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-emerald-500/10 blur-[120px]" />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="z-10 w-full max-w-md rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-900 md:p-12"
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/admin/login")}
+          className="mb-6 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 flex items-center gap-2"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+          Back to Login
+        </button>
+
+        <header className="mb-8">
+          <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+            Forgot Password?
+          </h2>
+          <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-400">
+            Enter your email address and we'll send you an OTP to reset your password.
+          </p>
+        </header>
+
+        <form onSubmit={handleSendOTP} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+              Email Address
+            </label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-bold outline-none transition-all focus:border-indigo-500 focus:bg-white disabled:bg-slate-100 dark:border-slate-800 dark:bg-slate-800/50 dark:text-white dark:focus:border-indigo-400"
+              placeholder="you@example.com"
+            />
+          </div>
+
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }} 
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-2 rounded-xl bg-red-50 p-4 text-xs font-bold text-red-600 dark:bg-red-500/10 dark:text-red-400"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {error}
+            </motion.div>
+          )}
+
+          {success && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }} 
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-2 rounded-xl bg-emerald-50 p-4 text-xs font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {success}
+            </motion.div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-slate-900 py-4 text-sm font-black uppercase tracking-widest text-white transition-all hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                Sending OTP...
+              </span>
+            ) : (
+              <>
+                Send OTP
+                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="mt-8 rounded-xl bg-indigo-50/50 p-4 dark:bg-indigo-500/5">
+          <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-2">🔒 Security Notice</p>
+          <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+            <li>• We'll never ask for your password via email</li>
+            <li>• OTP is valid for 15 minutes only</li>
+            <li>• Keep your OTP private and secure</li>
+          </ul>
+        </div>
+      </motion.div>
+    </section>
+  );
+};
+
+export default ForgotPasswordPage;
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const handleSendOTP = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!email.trim()) {
+      setError("Please enter your email address");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await apiClient.post("/auth/forgot-password", { email: email.toLowerCase() });
+      setSuccess("OTP sent to your email. Check your inbox!");
+      setTimeout(() => navigate("/verify-otp", { state: { email: email.toLowerCase() } }), 1500);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to send OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-4 dark:bg-[#020617]">
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-10%] h-[40%] w-[40%] rounded-full bg-indigo-500/10 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-emerald-500/10 blur-[120px]" />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="z-10 w-full max-w-md rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-900 md:p-12"
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/login")}
+          className="mb-6 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 flex items-center gap-2"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+          Back to Login
+        </button>
+
+        <header className="mb-8">
+          <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+            Forgot Password?
+          </h2>
+          <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-400">
+            Enter your email address and we'll send you an OTP to reset your password.
+          </p>
+        </header>
+
+        <form onSubmit={handleSendOTP} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+              Email Address
+            </label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-bold outline-none transition-all focus:border-indigo-500 focus:bg-white disabled:bg-slate-100 dark:border-slate-800 dark:bg-slate-800/50 dark:text-white dark:focus:border-indigo-400"
+              placeholder="you@example.com"
+            />
+          </div>
+
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }} 
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-2 rounded-xl bg-red-50 p-4 text-xs font-bold text-red-600 dark:bg-red-500/10 dark:text-red-400"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {error}
+            </motion.div>
+          )}
+
+          {success && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }} 
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-2 rounded-xl bg-emerald-50 p-4 text-xs font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {success}
+            </motion.div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-slate-900 py-4 text-sm font-black uppercase tracking-widest text-white transition-all hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                Sending OTP...
+              </span>
+            ) : (
+              <>
+                Send OTP
+                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="mt-8 rounded-xl bg-indigo-50/50 p-4 dark:bg-indigo-500/5">
+          <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-2">🔒 Security Notice</p>
+          <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+            <li>• We'll never ask for your password via email</li>
+            <li>• OTP is valid for 15 minutes only</li>
+            <li>• Keep your OTP private and secure</li>
+          </ul>
+        </div>
+      </motion.div>
+    </section>
+  );
+};
+
+export default ForgotPasswordPage;

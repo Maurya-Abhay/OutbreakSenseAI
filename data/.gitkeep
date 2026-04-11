@@ -1,0 +1,2 @@
+# Data directory for database-driven application
+# CSV files are not committed - all data comes from MongoDB database

@@ -5,6 +5,7 @@ import { predictRisk } from "../services/aiService.js";
 import { maybeCreateRiskAlert } from "../services/alertService.js";
 import { invalidateCacheByPrefix } from "../services/cacheService.js";
 import { recordPrediction } from "../services/predictionStoreService.js";
+import { sendReportConfirmation } from "../services/emailService.js";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -238,7 +239,7 @@ export const submitCitizenReport = async (req, res, next) => {
     const reporterNameInput = reporterName ?? name;
     const reporterEmailInput = reporterEmail ?? email;
 
-    if (!reporterNameInput || !age || !locationName || latitude === undefined || longitude === undefined) {
+    if (!reporterNameInput || !locationName || latitude === undefined || longitude === undefined) {
       return res.status(400).json({ message: "Missing required fields for report submission." });
     }
 
@@ -260,8 +261,9 @@ export const submitCitizenReport = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid reporter email format." });
     }
 
-    const normalizedAge = Math.round(toNumber(age, NaN));
-    if (!Number.isFinite(normalizedAge) || normalizedAge < 1 || normalizedAge > 120) {
+    const hasAge = !(age === undefined || age === null || age === "");
+    const normalizedAge = hasAge ? Math.round(toNumber(age, NaN)) : null;
+    if (hasAge && (!Number.isFinite(normalizedAge) || normalizedAge < 1 || normalizedAge > 120)) {
       return res.status(400).json({ message: "Age must be between 1 and 120." });
     }
 
@@ -364,6 +366,25 @@ export const submitCitizenReport = async (req, res, next) => {
     invalidateCacheByPrefix("risk-heatmap");
     invalidateCacheByPrefix("risk-trends");
     invalidateCacheByPrefix("admin-dashboard-summary");
+
+    // Send confirmation email asynchronously (don't block response)
+    if (normalizedReporterEmail) {
+      setImmediate(() => {
+        const reportUrl = process.env.APP_URL
+          ? `${process.env.APP_URL}/reports/${report._id}`
+          : "https://app.outbreaksense.ai/reports";
+
+        sendReportConfirmation({
+          email: normalizedReporterEmail,
+          recipientName: normalizedReporterName || "User",
+          reportId: report._id.toString(),
+          locationName: report.locationName,
+          reportUrl
+        }).catch(err => {
+          console.error(`Failed to send report confirmation to ${normalizedReporterEmail}:`, err.message);
+        });
+      });
+    }
 
     return res.status(201).json({
       message: "Disease report submitted successfully.",
@@ -509,6 +530,172 @@ export const verifyReportStatus = async (req, res, next) => {
     return res.json({
       message: verified ? "Report marked as verified." : "Report marked as unverified.",
       report: serializeReport(report)
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// NEW: Admin Report Confirmation (creates danger zone)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+export const confirmReportAndCreateZone = async (req, res, next) => {
+  try {
+    const { reportId } = req.params;
+    const { userId } = req;
+
+    if (!mongoose.Types.ObjectId.isValid(reportId)) {
+      return res.status(400).json({ message: "Invalid report id." });
+    }
+
+    const report = await Report.findById(reportId);
+    if (!report) {
+      return res.status(404).json({ message: "Report not found." });
+    }
+
+    if (report.submissionStatus === "confirmed") {
+      return res.status(400).json({ message: "Report already confirmed." });
+    }
+
+    // Import DangerZone model
+    const DangerZone = mongoose.model("DangerZone");
+
+    // Update report status
+    report.submissionStatus = "confirmed";
+    report.isVerified = true;
+    report.verifiedBy = userId;
+    report.verifiedAt = new Date();
+    await report.save();
+
+    // Create or update danger zone
+    let dangerZone = await DangerZone.findOne({
+      name: report.locationName
+    });
+
+    if (!dangerZone) {
+      dangerZone = new DangerZone({
+        name: report.locationName,
+        description: `Confirmed dengue cases. Disease: ${report.diseaseType}`,
+        location: report.location,
+        radius: 1.5,
+        riskScore: report.aiRiskScore || 80,
+        severity: report.severity,
+        confirmedReportId: report._id,
+        createdBy: userId,
+        status: "active"
+      });
+      await dangerZone.save();
+    }
+
+    // Send confirmation email if enabled
+    if (report.sendConfirmationEmail && report.reporterEmail) {
+      setImmediate(() => {
+        sendReportConfirmation({
+          email: report.reporterEmail,
+          recipientName: report.reporterName || "User",
+          reportId: report._id.toString(),
+          locationName: report.locationName,
+          status: "confirmed"
+        }).catch(err => {
+          console.error(`Failed to send confirmation email:`, err.message);
+        });
+      });
+    }
+
+    invalidateCacheByPrefix("admin-dashboard");
+    invalidateCacheByPrefix("risk-heatmap");
+
+    // Notify all users about new danger zone via socket
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("danger-zone:new", {
+        id: dangerZone._id,
+        name: dangerZone.name,
+        location: dangerZone.location,
+        riskScore: dangerZone.riskScore,
+        message: `⚠️ New danger zone confirmed: ${dangerZone.name}. Disease: ${report.diseaseType}`
+      });
+    }
+
+    return res.json({
+      message: "Report confirmed and danger zone created.",
+      report: serializeReport(report),
+      dangerZone
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// Admin rejects a report
+export const rejectReport = async (req, res, next) => {
+  try {
+    const { reportId } = req.params;
+    const { reason } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(reportId)) {
+      return res.status(400).json({ message: "Invalid report id." });
+    }
+
+    const report = await Report.findById(reportId);
+    if (!report) {
+      return res.status(404).json({ message: "Report not found." });
+    }
+
+    if (report.submissionStatus === "rejected") {
+      return res.status(400).json({ message: "Report already rejected." });
+    }
+
+    report.submissionStatus = "rejected";
+    report.rejectionReason = sanitizeText(reason, 300) || "No reason provided";
+    await report.save();
+
+    // Send rejection email if enabled
+    if (report.sendConfirmationEmail && report.reporterEmail) {
+      setImmediate(() => {
+        sendReportConfirmation({
+          email: report.reporterEmail,
+          recipientName: report.reporterName || "User",
+          reportId: report._id.toString(),
+          status: "rejected",
+          reason: report.rejectionReason
+        }).catch(err => {
+          console.error(`Failed to send rejection email:`, err.message);
+        });
+      });
+    }
+
+    invalidateCacheByPrefix("admin-dashboard");
+
+    return res.json({
+      message: "Report rejected.",
+      report: serializeReport(report)
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// List pending reports for admin
+export const listPendingReports = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const { pageNumber, pageSize } = readPagination({ page, limit });
+
+    const [total, reports] = await Promise.all([
+      Report.countDocuments({ submissionStatus: "pending" }),
+      Report.find({ submissionStatus: "pending" })
+        .sort({ createdAt: -1 })
+        .skip((pageNumber - 1) * pageSize)
+        .limit(pageSize)
+    ]);
+
+    return res.json({
+      total,
+      page: pageNumber,
+      limit: pageSize,
+      reports: reports.map(r => serializeReport(r))
     });
   } catch (error) {
     return next(error);

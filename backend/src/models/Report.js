@@ -4,7 +4,7 @@ const reportSchema = new mongoose.Schema(
   {
     reporterName: { type: String, required: true, trim: true },
     reporterEmail: { type: String, trim: true, lowercase: true },
-    age: { type: Number, required: true, min: 0, max: 120 },
+    age: { type: Number, required: false, min: 0, max: 120, default: null },
     symptoms: [{ type: String }],
     diseaseType: {
       type: String,
@@ -43,7 +43,14 @@ const reportSchema = new mongoose.Schema(
     },
     isVerified: { type: Boolean, default: false },
     verifiedAt: { type: Date, default: null },
-    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }
+    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    sendConfirmationEmail: { type: Boolean, default: true },
+    submissionStatus: {
+      type: String,
+      enum: ["pending", "confirmed", "rejected"],
+      default: "pending"
+    },
+    rejectionReason: { type: String, default: null }
   },
   { timestamps: true }
 );
@@ -55,6 +62,7 @@ reportSchema.index({ diseaseType: 1, createdAt: -1 });
 reportSchema.index({ aiRiskLevel: 1, createdAt: -1 });
 reportSchema.index({ reporterEmail: 1, createdAt: -1 });
 reportSchema.index({ isVerified: 1, createdAt: -1 });
+reportSchema.index({ verifiedBy: 1, isVerified: 1 }); // Fast admin verification filtering
 
 const Report = mongoose.model("Report", reportSchema);
 

@@ -1,30 +1,45 @@
 {
   "expo": {
     "name": "OutbreakSense AI",
-    "slug": "OutbreakSense AI",
+    "slug": "outbreaksense-ai",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo.svg",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/logo.svg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.outbreaksense.ai",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We need your location to show risk zones nearby.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "We need your location for real-time risk alerts.",
+        "NSCameraUsageDescription": "Camera access is needed for expanded functionality."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/logo.svg",
+        "monochromeImage": "./assets/logo.svg"
       },
-      "package": "com.anonymous.NHS19App"
+      "package": "com.outbreaksense.ai",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.INTERNET"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/logo.svg"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7ba0965b-35da-44e4-b3c3-fed04f939d5d"
+      }
     }
   }
 }

@@ -90,8 +90,13 @@ export const predictRisk = async ({
   };
 
   try {
+    const headers = {
+      "X-API-Key": process.env.AI_ENGINE_API_KEY || "sk-ai-prod-9c7e3b8f4d2a1e6c9b5f3a8d7e2c4b1f"
+    };
+
     const response = await axios.post(`${config.aiEngineUrl}/predict`, payload, {
-      timeout: 6000
+      timeout: 6000,
+      headers
     });
 
     return normalizePrediction(response.data, "ai-engine");
@@ -103,8 +108,13 @@ export const predictRisk = async ({
 
 export const predictRiskBatch = async (batchPayload) => {
   try {
+    const headers = {
+      "X-API-Key": process.env.AI_ENGINE_API_KEY || "sk-ai-prod-9c7e3b8f4d2a1e6c9b5f3a8d7e2c4b1f"
+    };
+
     const response = await axios.post(`${config.aiEngineUrl}/predict-batch`, { points: batchPayload }, {
-      timeout: 9000
+      timeout: 9000,
+      headers
     });
 
     const points = Array.isArray(response.data?.points) ? response.data.points : [];

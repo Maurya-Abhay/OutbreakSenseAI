@@ -22,3 +22,15 @@ __pycache__/
 .venv/
 .vscode/
 .idea/
+
+# Sample data - use database instead
+data/**/*.csv
+ai-engine/data/**/*.csv
+!data/.gitkeep
+!ai-engine/data/.gitkeep
+
+# Build and temp files
+*.log
+.next/
+.turbo/
+.cache/

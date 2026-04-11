@@ -2,7 +2,14 @@ import dayjs from "dayjs";
 import Report from "../models/Report.js";
 import { predictRisk, predictRiskBatch } from "../services/aiService.js";
 import { recordPrediction } from "../services/predictionStoreService.js";
-import { buildCacheKey, getCacheValue, setCacheValue } from "../services/cacheService.js";
+import { 
+  buildCacheKey, 
+  getCacheValue, 
+  setCacheValue,
+  getCachedLocationPrediction,
+  setCachedLocationPrediction,
+  invalidateLocationPrediction
+} from "../services/cacheService.js";
 
 const toNumber = (value, fallback) => {
   const parsed = Number(value);
@@ -187,6 +194,11 @@ export const getHeatmapRisk = async (req, res, next) => {
     const diseaseType = diseaseTypeInput
       ? normalizeDiseaseType(diseaseTypeInput, { fallback: null })
       : "";
+    
+    // Pagination params
+    const page = Math.max(1, toNumber(req.query?.page, 1));
+    const limit = Math.min(100, Math.max(1, toNumber(req.query?.limit, 50)));
+    const skip = (page - 1) * limit;
 
     if ((req.query?.dateFrom && !dateFrom) || (req.query?.dateTo && !dateTo)) {
       return res.status(400).json({ message: "dateFrom/dateTo must be valid date values." });
@@ -206,7 +218,9 @@ export const getHeatmapRisk = async (req, res, next) => {
       dateFrom: dateFrom?.toISOString(),
       dateTo: dateTo?.toISOString(),
       severity,
-      diseaseType
+      diseaseType,
+      page,
+      limit
     });
     const cached = getCacheValue(cacheKey);
 
@@ -227,6 +241,9 @@ export const getHeatmapRisk = async (req, res, next) => {
       matchStage.diseaseType = diseaseType;
     }
 
+    // Get total count for pagination
+    const totalCount = await Report.countDocuments(matchStage);
+
     const grouped = await Report.aggregate([
       { $match: matchStage },
       { $sort: { createdAt: 1 } },
@@ -240,15 +257,20 @@ export const getHeatmapRisk = async (req, res, next) => {
           latestWeather: { $last: "$weather" },
           latestDiseaseType: { $last: "$diseaseType" }
         }
-      }
+      },
+      { $skip: skip },
+      { $limit: limit }
     ]);
 
     if (!grouped.length) {
       const payload = {
-        points: fallbackHeatmap.map((point) => ({
-          ...point,
-          intensity: scoreToWeight(point.averageRisk)
-        }))
+        points: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          pages: 0
+        }
       };
       setCacheValue(cacheKey, payload, 45_000);
       return res.json(payload);
@@ -265,12 +287,46 @@ export const getHeatmapRisk = async (req, res, next) => {
       disease_type: item.latestDiseaseType || "Unknown"
     }));
 
-    const aiPredictions = await predictRiskBatch(aiInputBatch);
+    // Check cache for each location to avoid redundant predictions
+    const cachedPredictions = {};
+    const uncachedInputs = [];
+    const uncachedItemIndexes = [];
 
-    const predictionLookup = aiPredictions.reduce((acc, item) => {
-      acc[item.location_name] = item;
-      return acc;
-    }, {});
+    for (let i = 0; i < aiInputBatch.length; i++) {
+      const item = aiInputBatch[i];
+      const cached = getCachedLocationPrediction(item.location_name);
+      
+      if (cached) {
+        cachedPredictions[item.location_name] = cached;
+        console.log(`[Heatmap] Cache HIT for ${item.location_name}`);
+      } else {
+        uncachedInputs.push(item);
+        uncachedItemIndexes.push(i);
+      }
+    }
+
+    // Only predict uncached locations
+    let freshPredictions = [];
+    if (uncachedInputs.length > 0) {
+      console.log(`[Heatmap] Cache MISS for ${uncachedInputs.length}/${aiInputBatch.length} locations`);
+      freshPredictions = await predictRiskBatch(uncachedInputs);
+      
+      // Cache fresh predictions
+      for (const pred of freshPredictions) {
+        setCachedLocationPrediction(pred.location_name, pred);
+      }
+    } else {
+      console.log(`[Heatmap] All ${aiInputBatch.length} locations cached - using cache`);
+    }
+
+    // Merge cached and fresh predictions
+    const predictionLookup = {
+      ...cachedPredictions,
+      ...freshPredictions.reduce((acc, item) => {
+        acc[item.location_name] = item;
+        return acc;
+      }, {})
+    };
 
     const points = grouped.map((item) => {
       const prediction = predictionLookup[item._id];
@@ -289,7 +345,15 @@ export const getHeatmapRisk = async (req, res, next) => {
       };
     });
 
-    const payload = { points };
+    const payload = {
+      points,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        pages: Math.ceil(totalCount / limit)
+      }
+    };
     setCacheValue(cacheKey, payload, 45_000);
     return res.json(payload);
   } catch (error) {
@@ -371,14 +435,31 @@ export const getLocationHistory = async (req, res, next) => {
       return res.status(400).json({ message: "locationName path param is required." });
     }
 
+    // Pagination params
+    const page = Math.max(1, toNumber(req.query?.page, 1));
+    const limit = Math.min(100, Math.max(1, toNumber(req.query?.limit, 20)));
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination
+    const totalCount = await Report.countDocuments({
+      locationName: { $regex: `^${locationName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" }
+    });
+
     const reports = await Report.find({
       locationName: { $regex: `^${locationName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" }
     })
       .sort({ createdAt: -1 })
-      .limit(100);
+      .skip(skip)
+      .limit(limit);
 
     return res.json({
       locationName,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        pages: Math.ceil(totalCount / limit)
+      },
       history: reports.map((report) => ({
         id: report._id,
         date: report.createdAt,

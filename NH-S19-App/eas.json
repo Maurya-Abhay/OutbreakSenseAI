@@ -1,0 +1,19 @@
+{
+  "cli": {
+    "version": ">= 5.0.0"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://outbreaksense-backend.onrender.com/api",
+        "EXPO_PUBLIC_SOCKET_URL": "https://outbreaksense-backend.onrender.com",
+        "EXPO_PUBLIC_BACKEND_API": "https://outbreaksense-backend.onrender.com/api",
+        "EXPO_PUBLIC_BACKEND_SOCKET": "https://outbreaksense-backend.onrender.com"
+      }
+    }
+  }
+}

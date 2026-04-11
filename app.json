@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "7ba0965b-35da-44e4-b3c3-fed04f939d5d"
+      }
+    },
+    "android": {
+      "package": "com.abhay233004.outbreaksenseai"
+    }
+  }
+}

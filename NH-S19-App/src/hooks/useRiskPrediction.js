@@ -4,6 +4,8 @@ import { cacheRiskResult, getCachedRiskResult } from "../services/storageService
 import { sendLocalNotification } from "../services/notificationService";
 import { fetchCurrentWeather } from "../services/weatherService";
 import { areValidCoordinates, buildQuery, clampNumber, parseNumber, sanitizeText } from "../utils/sanitize";
+import { debounce } from "../utils/constants";
+import NetInfo from "@react-native-community/netinfo";
 
 const normalizeExplainability = (result) => {
   const topFactors = result?.explainability?.top_factors || result?.aiExplainability?.topFactors || [];
@@ -22,9 +24,21 @@ export const useRiskPrediction = ({ onHighRiskDetected } = {}) => {
   const [weatherSnapshot, setWeatherSnapshot] = useState(null);
   const [isOfflineResult, setIsOfflineResult] = useState(false);
   const [lastCheckedAt, setLastCheckedAt] = useState(null);
+  const [isUsingCached, setIsUsingCached] = useState(false);
   
-  // Race condition prevent karne ke liye request tracker
+  // Race condition prevention
   const requestCounter = useRef(0);
+  const abortControllerRef = useRef(null);
+
+  // ── Check if device is actually offline ────────────────────────────────────
+  // (vs API being temporarily down)
+  const isPhysicallyOffline = useRef(false);
+  useEffect(() => {
+    const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
+      isPhysicallyOffline.current = !state.isConnected || state.isInternetReachable === false;
+    });
+    return () => unsubscribeNetInfo();
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -34,7 +48,9 @@ export const useRiskPrediction = ({ onHighRiskDetected } = {}) => {
         setRiskResult(cached.value);
         setWeatherSnapshot(cached.value?.weatherUsed || null);
         setLastCheckedAt(cached.cachedAt || cached.value?.checkedAt || null);
-        setIsOfflineResult(true);
+        setIsUsingCached(true);
+        // Only show as offline if device is actually offline, not just because result is cached
+        setIsOfflineResult(isPhysicallyOffline.current);
       }
     })();
     return () => { mounted = false; };
@@ -43,6 +59,11 @@ export const useRiskPrediction = ({ onHighRiskDetected } = {}) => {
   const runRiskCheck = useCallback(async ({ location, weatherOverride } = {}) => {
     if (!location || !areValidCoordinates(location.latitude, location.longitude)) {
       throw new Error("Precise location is required for AI prediction.");
+    }
+
+    // Cancel previous request if still in flight
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
 
     const requestId = ++requestCounter.current;
@@ -95,7 +116,8 @@ export const useRiskPrediction = ({ onHighRiskDetected } = {}) => {
       setRiskResult(payload);
       setWeatherSnapshot(payload.weatherUsed);
       setLastCheckedAt(payload.checkedAt);
-      setIsOfflineResult(false);
+      setIsOfflineResult(false); // Clear offline flag on successful fetch
+      setIsUsingCached(false);
       await cacheRiskResult(payload);
 
       // 🚨 High Priority Alerting Logic
@@ -121,7 +143,9 @@ export const useRiskPrediction = ({ onHighRiskDetected } = {}) => {
       const cached = await getCachedRiskResult();
       if (cached?.value) {
         setRiskResult(cached.value);
-        setIsOfflineResult(true);
+        setIsUsingCached(true);
+        // Only mark as offline if device is ACTUALLY offline, not just because API failed
+        setIsOfflineResult(isPhysicallyOffline.current);
         return cached.value;
       }
       throw error;

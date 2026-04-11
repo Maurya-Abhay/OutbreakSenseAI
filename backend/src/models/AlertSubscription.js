@@ -4,7 +4,8 @@ const alertSubscriptionSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, lowercase: true, trim: true },
     locationName: { type: String, required: true, trim: true },
-    preferredChannel: { type: String, enum: ["email", "push"], default: "email" }
+    preferredChannel: { type: String, enum: ["email", "push"], default: "email" },
+    isActive: { type: Boolean, default: true }
   },
   { timestamps: true }
 );

@@ -22,6 +22,10 @@ export const globalRateLimit = buildLimiter(config.rateLimitMax, {
 
 export const authRateLimit = buildLimiter(config.authRateLimitMax);
 export const reportRateLimit = buildLimiter(Math.max(10, Math.floor(config.rateLimitMax / 4)));
+export const exportRateLimit = buildLimiter(6, {
+  windowMs: 60 * 60 * 1000,
+  message: "Too many export requests. Maximum 6 per hour."
+});
 
 export const helmetMiddleware = helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },

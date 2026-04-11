@@ -1,300 +1,331 @@
 import { memo, useMemo } from "react";
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-const TipsScreen = ({ theme, tips, tipsLoading, onRefreshTips, isOffline, usingCachedData }) => {
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+const Banner = ({ color, icon, message, theme, styles }) => (
+  <View style={[styles.banner, { borderColor: color + "45", backgroundColor: theme.card }]}>
+    <View style={[styles.bannerIconWrap, { backgroundColor: color + "18" }]}>
+      <Ionicons name={icon} size={15} color={color} />
+    </View>
+    <Text style={[styles.bannerText, { color: theme.text }]}>{message}</Text>
+  </View>
+);
+
+const TipCard = ({ tip, index, brand, theme, styles }) => (
+  <View
+    style={[
+      styles.tipCard,
+      { borderTopColor: theme.line },
+      index === 0 && { borderTopWidth: 0, paddingTop: 0 },
+    ]}
+  >
+    <View style={[styles.tipNumber, { backgroundColor: brand + "15" }]}>
+      <Text style={[styles.tipNumberText, { color: brand }]}>{index + 1}</Text>
+    </View>
+    <Text style={[styles.tipText, { color: theme.text }]}>{tip}</Text>
+  </View>
+);
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
+const TipsScreen = ({
+  theme,
+  tips = [],
+  tipsLoading = false,
+  onRefreshTips = () => {},
+  isOffline = false,
+  usingCachedData = false,
+}) => {
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const primaryColor = theme.blue || theme.brand || "#007AFF";
+  const brand  = theme?.brand   || "#3182ce";
+  const warn   = theme?.warning || "#dd6b20";
 
   return (
-    <ScrollView 
-      contentContainerStyle={styles.body}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* 🛠️ Status Banners */}
+    <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+
       {isOffline && (
-        <View style={styles.bannerOffline}>
-          <View style={styles.bannerIconWrapWarning}>
-            <Ionicons name="cloud-offline" size={16} color={theme.warn || "#FF9500"} />
-          </View>
-          <Text style={styles.bannerText}>Offline mode. Showing saved prevention guide.</Text>
-        </View>
+        <Banner
+          color={warn}
+          icon="cloud-offline-outline"
+          message="Offline — showing saved prevention guide."
+          theme={theme}
+          styles={styles}
+        />
       )}
 
       {usingCachedData && !isOffline && (
-        <View style={styles.bannerCached}>
-          <View style={styles.bannerIconWrapInfo}>
-            <Ionicons name="sync-circle" size={18} color={primaryColor} />
-          </View>
-          <Text style={styles.bannerText}>Currently viewing cached safety tips.</Text>
-        </View>
+        <Banner
+          color={brand}
+          icon="sync-circle-outline"
+          message="Viewing cached safety tips."
+          theme={theme}
+          styles={styles}
+        />
       )}
 
-      {/* 📘 Header Card */}
-      <View style={styles.headCard}>
+      {/* Header Card */}
+      <View style={[styles.headCard, { backgroundColor: theme.card, borderColor: theme.line }]}>
         <View style={styles.headTop}>
-          <View>
-            <Text style={[styles.kicker, { color: primaryColor }]}>COMMUNITY HEALTH</Text>
-            <Text style={styles.title}>Prevention Guide</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.kicker, { color: brand }]}>COMMUNITY HEALTH</Text>
+            <Text style={[styles.title, { color: theme.text }]}>Prevention Guide</Text>
           </View>
-          <Ionicons name="shield-checkmark" size={32} color={primaryColor + '40'} />
+          <View style={[styles.shieldWrap, { backgroundColor: brand + "12", borderColor: brand + "25" }]}>
+            <Ionicons name="shield-checkmark" size={22} color={brand} />
+          </View>
         </View>
-        
-        <Text style={styles.subtitle}>
-          Expert-sourced citizen tips to mitigate risk and prevent outbreak spread in your area.
+
+        <Text style={[styles.subtitle, { color: theme.textSoft }]}>
+          Expert-sourced tips to mitigate risk and prevent outbreak spread in your area.
         </Text>
 
-        <Pressable 
-          onPress={onRefreshTips} 
+        <Pressable
+          onPress={onRefreshTips}
           style={({ pressed }) => [
-            styles.refreshBtn, 
-            { backgroundColor: primaryColor, opacity: pressed ? 0.8 : 1 }
+            styles.refreshBtn,
+            { backgroundColor: brand, opacity: pressed ? 0.85 : 1 },
           ]}
         >
           {tipsLoading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
+            <ActivityIndicator color="#fff" size="small" />
           ) : (
             <>
-              <Ionicons name="refresh" size={16} color="#FFFFFF" />
+              <Ionicons name="refresh-outline" size={15} color="#fff" />
               <Text style={styles.refreshText}>Sync Latest Tips</Text>
             </>
           )}
         </Pressable>
       </View>
 
-      {/* 📋 Tips List Section */}
-      <View style={styles.listCard}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Safety Protocols</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{tips.length} Actions</Text>
+      {/* Tips List Card */}
+      <View style={[styles.listCard, { backgroundColor: theme.card, borderColor: theme.line }]}>
+        <View style={styles.listHeader}>
+          <Text style={[styles.listTitle, { color: theme.text }]}>Safety Protocols</Text>
+          <View style={[styles.countBadge, { backgroundColor: theme.cardElevated, borderColor: theme.line }]}>
+            <Text style={[styles.countText, { color: theme.textSoft }]}>
+              {tips.length} {tips.length === 1 ? "action" : "actions"}
+            </Text>
           </View>
         </View>
 
         {!tips.length && !tipsLoading ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="book-outline" size={48} color={theme.line} />
-            <Text style={styles.empty}>No tips available right now. Please refresh.</Text>
+          <View style={styles.emptyState}>
+            <Ionicons name="book-outline" size={36} color={theme.textSoft} />
+            <Text style={[styles.emptyText, { color: theme.textSoft }]}>
+              No tips available right now. Please refresh.
+            </Text>
           </View>
-        ) : null}
-
-        <View style={styles.tipsContainer}>
-          {tips.map((tip, index) => (
-            <View key={`${tip}-${index}`} style={styles.tipCard}>
-              <View style={[styles.tipNumberWrap, { backgroundColor: primaryColor + '15' }]}>
-                <Text style={[styles.tipNumber, { color: primaryColor }]}>{index + 1}</Text>
-              </View>
-              <View style={styles.tipContent}>
-                <Text style={styles.tipText}>{tip}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
+        ) : (
+          <View>
+            {tips.map((tip, index) => (
+              <TipCard
+                key={`tip-${index}`}
+                tip={tip}
+                index={index}
+                brand={brand}
+                theme={theme}
+                styles={styles}
+              />
+            ))}
+          </View>
+        )}
       </View>
 
-      {/* 💡 Info Note */}
+      {/* Footer */}
       <View style={styles.footerNote}>
-        <Ionicons name="information-circle-outline" size={14} color={theme.textMuted} />
-        <Text style={styles.footerNoteText}>
-          These tips are updated based on local health data.
+        <Ionicons name="information-circle-outline" size={13} color={theme.textSoft} />
+        <Text style={[styles.footerText, { color: theme.textSoft }]}>
+          Tips are updated based on local health data.
         </Text>
       </View>
+
+      <View style={{ height: 100 }} />
     </ScrollView>
   );
 };
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const createStyles = (theme) =>
   StyleSheet.create({
     body: {
       paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: 120,
-      gap: 16
-    },
-    // Banners
-    bannerOffline: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-      borderRadius: 14,
-      backgroundColor: theme.card,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.warn || "#FF9500",
-    },
-    bannerCached: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-      borderRadius: 14,
-      backgroundColor: theme.card,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.blue || "#007AFF",
-    },
-    bannerIconWrapWarning: {
-      backgroundColor: (theme.warn || "#FF9500") + '20',
-      padding: 6,
-      borderRadius: 8
-    },
-    bannerIconWrapInfo: {
-      backgroundColor: (theme.blue || "#007AFF") + '15',
-      padding: 5,
-      borderRadius: 8
-    },
-    bannerText: {
-      color: theme.text,
-      fontSize: 13,
-      fontWeight: "600",
-      flex: 1
+      paddingTop: 14,
+      paddingBottom: 0,
+      gap: 16,
     },
 
-    // Header Card
+    banner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      borderRadius: 14,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 11,
+    },
+    bannerIconWrap: {
+      width: 30,
+      height: 30,
+      borderRadius: 8,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    bannerText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: "500",
+    },
+
     headCard: {
-      backgroundColor: theme.card,
-      borderRadius: 24,
-      padding: 20,
+      borderRadius: 20,
+      padding: 16,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.line,
       ...Platform.select({
-        ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10 },
-        android: { elevation: 3 }
-      })
+        ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14 },
+        android: { elevation: 4 },
+      }),
     },
     headTop: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start'
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 8,
     },
     kicker: {
       fontSize: 10,
-      fontWeight: "800",
+      fontWeight: "700",
       letterSpacing: 1.5,
-      marginBottom: 2
+      marginBottom: 4,
     },
     title: {
-      color: theme.text,
       fontSize: 24,
-      fontWeight: "900",
-      letterSpacing: -0.5
+      fontWeight: "800",
+      letterSpacing: -0.5,
+    },
+    shieldWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 13,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: 12,
     },
     subtitle: {
-      marginTop: 8,
-      marginBottom: 20,
-      color: theme.textSoft,
       fontSize: 13,
       lineHeight: 19,
-      fontWeight: "500"
+      fontWeight: "400",
+      marginBottom: 16,
     },
     refreshBtn: {
-      height: 46,
-      borderRadius: 14,
+      height: 48,
+      borderRadius: 13,
       alignItems: "center",
       justifyContent: "center",
       flexDirection: "row",
       gap: 8,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 4,
-      elevation: 2
+      ...Platform.select({
+        ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+        android: { elevation: 4 },
+      }),
     },
     refreshText: {
-      color: "#FFFFFF",
-      fontSize: 13,
-      fontWeight: "700"
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "700",
     },
 
-    // Tips List
     listCard: {
-      backgroundColor: theme.card,
-      borderRadius: 24,
-      padding: 20,
+      borderRadius: 20,
+      padding: 16,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.line,
+      ...Platform.select({
+        ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 12 },
+        android: { elevation: 3 },
+      }),
     },
-    sectionHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 20
+    listHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16,
     },
-    sectionTitle: {
-      color: theme.text,
-      fontSize: 18,
+    listTitle: {
+      fontSize: 17,
       fontWeight: "800",
+      letterSpacing: -0.3,
     },
-    badge: {
-      backgroundColor: theme.bg,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
+    countBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 10,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.line
     },
-    badgeText: {
+    countText: {
       fontSize: 11,
-      fontWeight: "700",
-      color: theme.textSoft
+      fontWeight: "600",
     },
-    tipsContainer: {
-      gap: 16
-    },
+
     tipCard: {
       flexDirection: "row",
       alignItems: "flex-start",
-      gap: 14,
-      paddingBottom: 16,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: theme.line,
-    },
-    tipNumberWrap: {
-      width: 32,
-      height: 32,
-      borderRadius: 12,
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: 2
+      gap: 12,
+      paddingVertical: 12,
+      borderTopWidth: StyleSheet.hairlineWidth,
     },
     tipNumber: {
-      fontSize: 15,
-      fontWeight: "900"
+      width: 32,
+      height: 32,
+      borderRadius: 9,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
     },
-    tipContent: {
-      flex: 1,
+    tipNumberText: {
+      fontSize: 14,
+      fontWeight: "800",
     },
     tipText: {
-      color: theme.text,
+      flex: 1,
       fontSize: 14,
       lineHeight: 21,
-      fontWeight: "600"
+      fontWeight: "500",
+      paddingTop: 5,
     },
-    emptyContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 40,
-      gap: 12
+
+    emptyState: {
+      alignItems: "center",
+      paddingVertical: 32,
+      gap: 10,
     },
-    empty: {
-      color: theme.textSoft,
-      fontSize: 14,
-      textAlign: 'center',
-      fontWeight: "500"
+    emptyText: {
+      fontSize: 13,
+      fontWeight: "400",
+      textAlign: "center",
+      lineHeight: 19,
     },
+
     footerNote: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      marginTop: 4
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 5,
     },
-    footerNoteText: {
-      color: theme.textMuted,
+    footerText: {
       fontSize: 11,
-      fontWeight: "500"
-    }
+      fontWeight: "400",
+    },
   });
 
 export default memo(TipsScreen);

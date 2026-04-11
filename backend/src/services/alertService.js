@@ -1,5 +1,7 @@
 import dayjs from "dayjs";
 import Alert from "../models/Alert.js";
+import AlertSubscription from "../models/AlertSubscription.js";
+import { sendAlertNotification } from "./emailService.js";
 
 const normalizeRoomKey = (locationName) =>
   String(locationName || "")
@@ -52,6 +54,39 @@ export const maybeCreateRiskAlert = async ({ locationName, riskScore, io }) => {
       io.to(`location:${roomKey}`).emit("alert:new", payload);
     }
   }
+
+  // Send email notifications to subscribers (asynchronously to avoid blocking)
+  setImmediate(async () => {
+    try {
+      const subscribers = await AlertSubscription.find({
+        locationName: locationName,
+        isActive: true
+      });
+
+      for (const subscriber of subscribers) {
+        const actionUrl = process.env.APP_URL
+          ? `${process.env.APP_URL}/alerts/${alert._id}`
+          : "https://app.outbreaksense.ai/alerts";
+
+        await sendAlertNotification({
+          email: subscriber.email,
+          recipientName: subscriber.name,
+          alertTitle: alert.title,
+          alertMessage: alert.message,
+          locationName: alert.locationName,
+          riskLevel: alert.severity === "high" ? "High" : alert.severity === "medium" ? "Medium" : "Low",
+          actionUrl
+        }).catch(err => {
+          // Log but don't throw - one failed email shouldn't stop others
+          console.error(`Failed to send alert email to ${subscriber.email}:`, err.message);
+        });
+      }
+
+      console.log(`[Alert Service] Sent notifications to ${subscribers.length} subscribers for ${locationName}`);
+    } catch (error) {
+      console.error("[Alert Service] Error sending email notifications:", error.message);
+    }
+  });
 
   return alert;
 };

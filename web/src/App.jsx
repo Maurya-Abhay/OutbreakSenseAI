@@ -2,9 +2,13 @@ import { Suspense, lazy } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./hooks/useTheme";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const DashboardLayout = lazy(() => import("./layouts/DashboardLayout"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const VerifyOTPPage = lazy(() => import("./pages/VerifyOTPPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const RiskMapPage = lazy(() => import("./pages/RiskMapPage"));
 const CitizenReportsPage = lazy(() => import("./pages/CitizenReportsPage"));
@@ -45,6 +49,30 @@ const AppRoutes = () => (
         }
       />
       <Route
+        path="/forgot-password"
+        element={
+          <PublicOnlyAdminLoginRoute>
+            <ForgotPasswordPage />
+          </PublicOnlyAdminLoginRoute>
+        }
+      />
+      <Route
+        path="/verify-otp"
+        element={
+          <PublicOnlyAdminLoginRoute>
+            <VerifyOTPPage />
+          </PublicOnlyAdminLoginRoute>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <PublicOnlyAdminLoginRoute>
+            <ResetPasswordPage />
+          </PublicOnlyAdminLoginRoute>
+        }
+      />
+      <Route
         path="/admin"
         element={
           <ProtectedAdminRoute>
@@ -70,7 +98,9 @@ const App = () => {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

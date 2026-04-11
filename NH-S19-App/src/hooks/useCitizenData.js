@@ -177,8 +177,24 @@ export const useCitizenData = ({ currentLocation } = {}) => {
     await Promise.all([loadTips({ manual: true }), loadMapData({ manual: true })]);
   }, [loadMapData, loadTips]);
 
+  // ── Initialize Network State and Setup Listener ──────────────────────────
   useEffect(() => {
     let mounted = true;
+
+    (async () => {
+      // Fetch ACTUAL current network state on app start (not just assume online)
+      try {
+        const currentNetState = await NetInfo.fetch();
+        if (mounted) {
+          setNetworkState({
+            isConnected: Boolean(currentNetState.isConnected),
+            isInternetReachable: currentNetState.isInternetReachable ?? true
+          });
+        }
+      } catch (err) {
+        console.warn("NetInfo fetch failed:", err);
+      }
+    })();
 
     hydrateCachedState().then(() => {
       if (!mounted) {
@@ -188,11 +204,14 @@ export const useCitizenData = ({ currentLocation } = {}) => {
       loadMapData();
     });
 
+    // Listen to future network state changes
     const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
-      setNetworkState({
-        isConnected: Boolean(state.isConnected),
-        isInternetReachable: state.isInternetReachable
-      });
+      if (mounted) {
+        setNetworkState({
+          isConnected: Boolean(state.isConnected),
+          isInternetReachable: state.isInternetReachable ?? true
+        });
+      }
     });
 
     return () => {
@@ -271,6 +290,28 @@ export const useCitizenData = ({ currentLocation } = {}) => {
             highPriority: true
           });
         }
+      },
+      onDangerZone: async (payload) => {
+        const locationName = sanitizeText(payload?.name || "Nearby area", 120);
+        const riskScore = payload?.riskScore || 80;
+
+        appendAlert({
+          title: "⚠️ New danger zone confirmed",
+          message: `${locationName} has been marked as a danger zone (Risk: ${riskScore}/100)`,
+          level: riskScore >= 80 ? "high" : "medium",
+          locationName,
+          source: "danger-zone"
+        });
+
+        await sendLocalNotification({
+          title: "⚠️ Danger Zone Alert",
+          body: `${locationName} - Risk Level: ${riskScore}/100. Avoid if possible.`,
+          data: { type: "danger-zone", locationName, zoneId: payload?.id },
+          highPriority: true
+        });
+
+        // Refresh map data to show new zone
+        await loadMapData();
       }
     });
 

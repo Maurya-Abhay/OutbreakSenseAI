@@ -116,7 +116,7 @@ def _build_model_bundle(model, data: pd.DataFrame, model_type: str) -> ModelBund
 
 def load_or_train_model() -> ModelBundle:
     model_path = os.getenv("MODEL_PATH", "model/risk_model.joblib")
-    dataset_path = os.getenv("DATASET_PATH", "data/dengue_sample_data.csv")
+    dataset_path = os.getenv("DATASET_PATH", "data/training_data.csv")
     model_type = os.getenv("MODEL_TYPE", "random_forest")
 
     if os.path.exists(model_path):

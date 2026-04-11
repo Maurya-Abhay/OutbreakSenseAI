@@ -45,6 +45,27 @@ const devOriginPattern =
 
 const jwtSecret = process.env.JWT_SECRET || (isProduction ? "" : "dev-only-change-this-secret");
 
+const validateRequiredVars = () => {
+  const errors = [];
+  if (isProduction) {
+    if (!process.env.MONGO_URI) errors.push("MONGO_URI is required in production");
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+      errors.push("JWT_SECRET must be set and at least 32 characters in production");
+    }
+    if (!process.env.JWT_REFRESH_SECRET || process.env.JWT_REFRESH_SECRET.length < 32) {
+      errors.push("JWT_REFRESH_SECRET must be set and at least 32 characters in production");
+    }
+  }
+  if (errors.length > 0) {
+    console.error("\n❌ Configuration Errors:");
+    errors.forEach(err => console.error(`  - ${err}`));
+    console.error("\n");
+    if (isProduction) process.exit(1);
+  }
+};
+
+validateRequiredVars();
+
 const isAllowedOrigin = (origin) => {
   if (!origin) {
     return true;

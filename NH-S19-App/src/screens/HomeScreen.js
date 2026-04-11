@@ -1,9 +1,28 @@
-import { memo } from "react";
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { memo, useMemo, useEffect, useState, useRef } from "react";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import RiskCard from "../components/RiskCard";
 import TrendChart from "../components/TrendChart";
 import { toScorePercent } from "../theme/palette";
+
+const MetricCard = ({ icon, iconColor, label, value, theme, styles }) => (
+  <View style={styles.metricCard}>
+    <View style={[styles.metricIconWrap, { backgroundColor: iconColor + "18" }]}>
+      <Ionicons name={icon} size={15} color={iconColor} />
+    </View>
+    <Text style={styles.metricLabel}>{label}</Text>
+    <Text style={styles.metricValue}>{value}</Text>
+  </View>
+);
 
 const HomeScreen = ({
   theme,
@@ -20,102 +39,149 @@ const HomeScreen = ({
   alertsFeed,
   isOffline,
   usingCachedData,
-  lastCheckedAt
+  lastCheckedAt,
 }) => {
-  const styles = createStyles(theme);
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const brand = theme.brand || "#3182ce";
+  const warn  = theme.warning || "#dd6b20";
+  const danger= theme.danger  || "#e53e3e";
+  const success=theme.success || "#2f855a";
 
-  // Fallback icon color logic to ensure it adapts to theme
-  const primaryColor = theme.blue || theme.brand || "#007AFF";
+  // State Declarations (Duplicates Removed)
+  const [isLiveMonitoring, setIsLiveMonitoring] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const autoRefreshRef = useRef(null);
+
+  // Auto-refresh every 30 seconds for LIVE feel
+  useEffect(() => {
+    setIsLiveMonitoring(true);
+    const scheduleAutoRefresh = () => {
+      autoRefreshRef.current = setInterval(() => {
+        if (onRiskCheck && currentLocation) {
+          onRiskCheck({ skipCache: true });
+        }
+      }, 30000); // Reduced from 60s to 30s for true "live" updates
+    };
+    
+    scheduleAutoRefresh();
+    
+    return () => {
+      setIsLiveMonitoring(false);
+      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+    };
+  }, [onRiskCheck, currentLocation]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (onRiskCheck) {
+        await onRiskCheck();
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const metrics = [
+    { icon: "pulse",       iconColor: danger,  label: "Dengue Risk",   value: toScorePercent(riskResult?.risk_score) },
+    { icon: "people",      iconColor: brand,   label: "Nearby Cases",  value: String(nearbyCasesCount ?? 0) },
+    { icon: "map",         iconColor: warn,    label: "High Zones",    value: String(highRiskZones ?? 0) },
+    { icon: "trending-up", iconColor: success, label: "Forecast Peak", value: `${Math.round(Number(weeklyPeak || 0) * 100)}%` },
+  ];
 
   return (
-    <ScrollView 
+    <ScrollView
       contentContainerStyle={styles.body}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={brand}
+          colors={[brand]}
+        />
+      }
     >
-      {/* Native System Status Banners */}
+      {/* Status Banners */}
       {isOffline && (
-        <View style={styles.bannerOffline}>
-          <View style={styles.bannerIconWrapWarning}>
-            <Ionicons name="cloud-offline" size={16} color={theme.warn || "#FF9500"} />
+        <View style={[styles.banner, { borderColor: warn + "50" }]}>
+          <View style={[styles.bannerIconWrap, { backgroundColor: warn + "18" }]}>
+            <Ionicons name="cloud-offline-outline" size={15} color={warn} />
           </View>
-          <Text style={styles.bannerText}>Offline mode active. Showing cached data.</Text>
+          <Text style={styles.bannerText}>Offline mode — showing cached data.</Text>
         </View>
       )}
-
       {usingCachedData && !isOffline && (
-        <View style={styles.bannerCached}>
-          <View style={styles.bannerIconWrapInfo}>
-            <Ionicons name="server" size={16} color={primaryColor} />
+        <View style={[styles.banner, { borderColor: brand + "40" }]}>
+          <View style={[styles.bannerIconWrap, { backgroundColor: brand + "15" }]}>
+            <Ionicons name="server-outline" size={15} color={brand} />
           </View>
-          <Text style={styles.bannerText}>Some sections loaded from recent cache.</Text>
+          <Text style={styles.bannerText}>Some data loaded from recent cache.</Text>
         </View>
       )}
 
-      {/* Premium Hero Card */}
+      {/* Hero Card */}
       <View style={styles.heroCard}>
         <View style={styles.heroHead}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.kicker, { color: primaryColor }]}>LIVE COMMUNITY STATUS</Text>
+            <View style={styles.kickerRow}>
+              <Text style={[styles.kicker, { color: brand }]}>LIVE STATUS</Text>
+              {isLiveMonitoring && (
+                <View style={[styles.liveIndicator, { backgroundColor: theme.success }]}>
+                  <View style={styles.livePulse} />
+                  <Text style={styles.liveText}>LIVE</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.heroTitle}>Neighborhood Watch</Text>
-            <View style={styles.locationRow}>
-              <Ionicons name="location" size={12} color={theme.textSoft} />
-              <Text style={styles.heroSubtitle}>
+            <View style={[styles.locationPill, { backgroundColor: theme.cardElevated, borderColor: theme.line }]}>
+              <Ionicons name="location-outline" size={12} color={theme.textSoft} />
+              <Text style={[styles.locationText, { color: theme.textSoft }]} numberOfLines={2}>
                 {currentLocation?.locationName || "Current Area"}
               </Text>
             </View>
           </View>
-          <View style={[styles.heroBadge, { backgroundColor: primaryColor + '15', borderColor: primaryColor + '30' }]}>
-            <Ionicons name="shield-checkmark" size={24} color={primaryColor} />
+          <View style={[styles.heroBadge, { backgroundColor: brand + "15", borderColor: brand + "30" }]}>
+            <Ionicons name="shield-checkmark" size={22} color={brand} />
           </View>
         </View>
 
-        {/* Enhanced Metrics Grid with Icons */}
+        {/* Metrics Grid */}
         <View style={styles.metricsGrid}>
-          <View style={styles.metricCard}>
-            <Ionicons name="pulse" size={16} color={theme.danger || "#FF3B30"} style={styles.metricIcon} />
-            <Text style={styles.metricLabel}>Dengue Risk</Text>
-            <Text style={styles.metricValue}>{toScorePercent(riskResult?.risk_score)}</Text>
-          </View>
-          
-          <View style={styles.metricCard}>
-            <Ionicons name="people" size={16} color={primaryColor} style={styles.metricIcon} />
-            <Text style={styles.metricLabel}>Nearby Cases</Text>
-            <Text style={styles.metricValue}>{nearbyCasesCount}</Text>
-          </View>
-
-          <View style={styles.metricCard}>
-            <Ionicons name="map" size={16} color={theme.warn || "#FF9500"} style={styles.metricIcon} />
-            <Text style={styles.metricLabel}>High Zones</Text>
-            <Text style={styles.metricValue}>{highRiskZones}</Text>
-          </View>
-
-          <View style={styles.metricCard}>
-            <Ionicons name="trending-up" size={16} color={theme.success || "#34C759"} style={styles.metricIcon} />
-            <Text style={styles.metricLabel}>Forecast Peak</Text>
-            <Text style={styles.metricValue}>{Math.round(Number(weeklyPeak || 0) * 100)}%</Text>
-          </View>
+          {metrics.map((m) => (
+            <MetricCard key={m.label} {...m} theme={theme} styles={styles} />
+          ))}
         </View>
 
-        {/* Premium Native Action Buttons */}
+        {/* Action Buttons */}
         <View style={styles.actionRow}>
-          <Pressable onPress={onDetectLocation} style={[styles.btn, styles.btnGhost]}>
-            <Ionicons name="navigate" size={16} color={theme.text} style={{ marginRight: 6 }} />
-            <Text style={styles.btnGhostText}>Detect GPS</Text>
+          <Pressable
+            onPress={onDetectLocation}
+            style={[styles.btn, styles.btnGhost]}
+          >
+            <Ionicons name="navigate-outline" size={15} color={theme.text} />
+            <Text style={[styles.btnText, { color: theme.text }]}>Detect GPS</Text>
           </Pressable>
-          <Pressable onPress={onRiskCheck} style={[styles.btn, styles.btnSolid, { backgroundColor: primaryColor }]}>
+          <Pressable
+            onPress={onRiskCheck}
+            style={[styles.btn, styles.btnSolid, { backgroundColor: brand }]}
+          >
             {riskLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color="#fff" size="small" />
             ) : (
               <>
-                <Ionicons name="scan" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.btnSolidText}>Check Risk</Text>
+                <Ionicons name="scan-outline" size={15} color="#fff" />
+                <Text style={[styles.btnText, { color: "#fff" }]}>Check Risk</Text>
               </>
             )}
           </Pressable>
         </View>
 
-        <Text style={styles.lastChecked}>
-          Last checked: {lastCheckedAt ? new Date(lastCheckedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--"}
+        <Text style={[styles.lastChecked, { color: theme.textSoft }]}>
+          Last checked:{" "}
+          {lastCheckedAt
+            ? new Date(lastCheckedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            : "—"}
         </Text>
       </View>
 
@@ -129,34 +195,51 @@ const HomeScreen = ({
 
       <TrendChart theme={theme} trends={trends} />
 
-      {/* Refined Quick Alerts List */}
-      <View style={styles.quickAlertsCard}>
-        <View style={styles.quickHeaderWrap}>
-          <Text style={styles.quickTitle}>Quick Notifications</Text>
+      {/* Quick Alerts */}
+      <View style={styles.alertsCard}>
+        <View style={styles.alertsHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Notifications</Text>
           <Pressable>
-            <Text style={[styles.seeAllText, { color: primaryColor }]}>See All</Text>
+            <Text style={[styles.seeAll, { color: brand }]}>See All</Text>
           </Pressable>
         </View>
-        <Text style={styles.quickSubtitle}>Recent citizen updates and risk warnings</Text>
+        <Text style={[styles.sectionSub, { color: theme.textSoft }]}>
+          Recent citizen updates and risk warnings
+        </Text>
 
-        {!alertsFeed.length ? (
+        {(!alertsFeed || alertsFeed.length === 0) ? (
           <View style={styles.emptyState}>
-            <Ionicons name="checkmark-circle-outline" size={32} color={theme.textMuted} />
-            <Text style={styles.empty}>All clear. No updates yet.</Text>
+            <Ionicons name="checkmark-circle-outline" size={32} color={theme.textSoft} />
+            <Text style={[styles.emptyText, { color: theme.textSoft }]}>
+              All clear. No updates yet.
+            </Text>
           </View>
-        ) : null}
-
-        {alertsFeed.slice(0, 3).map((item, index) => (
-          <View key={item.id} style={[styles.quickItem, index === 0 && { borderTopWidth: 0, marginTop: 0 }]}>
-            <View style={styles.quickItemDot} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.quickItemTitle} numberOfLines={1}>{item.title}</Text>
-              <Text style={styles.quickItemText} numberOfLines={2}>{item.message}</Text>
+        ) : (
+          alertsFeed.slice(0, 3).map((item, index) => (
+            <View
+              key={item.id}
+              style={[
+                styles.alertRow,
+                { borderTopColor: theme.line },
+                index === 0 && { borderTopWidth: 0, marginTop: 0 },
+              ]}
+            >
+              <View style={[styles.alertDot, { backgroundColor: warn }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.alertTitle, { color: theme.text }]} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={[styles.alertMsg, { color: theme.textSoft }]} numberOfLines={2}>
+                  {item.message}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={14} color={theme.textSoft} />
             </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.line} />
-          </View>
-        ))}
+          ))
+        )}
       </View>
+
+      <View style={{ height: 100 }} />
     </ScrollView>
   );
 };
@@ -164,254 +247,257 @@ const HomeScreen = ({
 const createStyles = (theme) =>
   StyleSheet.create({
     body: {
-      paddingHorizontal: 16, // Slightly wider margins for premium feel
-      paddingTop: 16,
-      paddingBottom: 120, // Enough space for the App.js floating tab bar
-      gap: 16 // Increased gap for better breathing room
+      paddingHorizontal: 16,
+      paddingTop: 18,
+      paddingBottom: 0,
+      gap: 16,
     },
-    
-    // Smooth System Banners
-    bannerOffline: {
+
+    // Banner
+    banner: {
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
-      borderRadius: 14,
       backgroundColor: theme.card,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.warn || "#FF9500",
-      ...Platform.select({
-        ios: { shadowColor: theme.warn || "#FF9500", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 },
-        android: { elevation: 2 }
-      })
+      borderRadius: 14,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 11,
     },
-    bannerCached: {
-      flexDirection: "row",
+    bannerIconWrap: {
+      width: 30,
+      height: 30,
+      borderRadius: 8,
       alignItems: "center",
-      gap: 10,
-      borderRadius: 14,
-      backgroundColor: theme.card,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.blue || theme.brand || "#007AFF",
-      ...Platform.select({
-        ios: { shadowColor: theme.blue || "#007AFF", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 },
-        android: { elevation: 2 }
-      })
-    },
-    bannerIconWrapWarning: {
-      backgroundColor: (theme.warn || "#FF9500") + '20',
-      padding: 6,
-      borderRadius: 8
-    },
-    bannerIconWrapInfo: {
-      backgroundColor: (theme.blue || theme.brand || "#007AFF") + '20',
-      padding: 6,
-      borderRadius: 8
+      justifyContent: "center",
     },
     bannerText: {
       flex: 1,
       color: theme.text,
       fontSize: 13,
-      fontWeight: "600"
+      fontWeight: "500",
     },
 
-    // Main Dashboard Hero
+    // Hero Card
     heroCard: {
-      borderRadius: 24, // Premium rounded corners
       backgroundColor: theme.card,
-      padding: 16,
+      borderRadius: 22,
+      padding: 18,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.line,
       ...Platform.select({
-        ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 12 },
-        android: { elevation: 4 }
-      })
+        ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14 },
+        android: { elevation: 4 },
+      }),
     },
     heroHead: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "flex-start"
+      alignItems: "flex-start",
+    },
+    kickerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 4,
     },
     kicker: {
-      fontSize: 11,
-      fontWeight: "800",
-      letterSpacing: 1.2,
-      textTransform: 'uppercase',
-      marginBottom: 4
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 1.5,
+    },
+    liveIndicator: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 12,
+    },
+    livePulse: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: "#fff",
+    },
+    liveText: {
+      fontSize: 9,
+      fontWeight: "700",
+      color: "#fff",
+      letterSpacing: 0.5,
     },
     heroTitle: {
       color: theme.text,
       fontSize: 24,
-      fontWeight: "900",
-      letterSpacing: -0.5
+      fontWeight: "800",
+      letterSpacing: -0.5,
+      marginBottom: 8,
     },
-    locationRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      marginTop: 4
+    locationPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      alignSelf: "flex-start",
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 20,
+      borderWidth: StyleSheet.hairlineWidth,
     },
-    heroSubtitle: {
-      color: theme.textSoft,
-      fontSize: 13,
-      fontWeight: "500"
+    locationText: {
+      fontSize: 12,
+      fontWeight: "500",
+      maxWidth: 180,
     },
     heroBadge: {
       width: 48,
       height: 48,
-      borderRadius: 24,
+      borderRadius: 14,
       alignItems: "center",
       justifyContent: "center",
       borderWidth: 1,
+      marginLeft: 12,
     },
 
-    // Inner Grid Metrics
+    // Metrics
     metricsGrid: {
-      marginTop: 20,
       flexDirection: "row",
       flexWrap: "wrap",
-      gap: 10
+      gap: 10,
+      marginTop: 16,
     },
     metricCard: {
-      width: "48%", // 2x2 Grid
-      backgroundColor: theme.bg, // Pops against the card background
-      borderRadius: 16,
-      padding: 12,
+      width: "48%",
+      backgroundColor: theme.cardElevated,
+      borderRadius: 14,
+      padding: 14,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.line,
+      gap: 4,
     },
-    metricIcon: {
-      marginBottom: 6
+    metricIconWrap: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 4,
     },
     metricLabel: {
       color: theme.textSoft,
-      fontSize: 12,
-      fontWeight: "600"
+      fontSize: 11,
+      fontWeight: "600",
+      letterSpacing: 0.3,
     },
     metricValue: {
-      marginTop: 2,
       color: theme.text,
       fontSize: 20,
-      fontWeight: "800"
+      fontWeight: "800",
+      letterSpacing: -0.3,
+      marginTop: 2,
     },
 
-    // Native Buttons
+    // Buttons
     actionRow: {
-      marginTop: 20,
       flexDirection: "row",
-      gap: 12
+      gap: 10,
+      marginTop: 16,
     },
     btn: {
       flex: 1,
-      minHeight: 48, // Bigger touch target
-      borderRadius: 14,
-      flexDirection: 'row',
+      height: 48,
+      borderRadius: 13,
+      flexDirection: "row",
       alignItems: "center",
-      justifyContent: "center"
+      justifyContent: "center",
+      gap: 7,
     },
     btnGhost: {
       borderWidth: 1,
       borderColor: theme.line,
-      backgroundColor: theme.bg
+      backgroundColor: theme.cardElevated,
     },
     btnSolid: {
-      // Color defined dynamically inline
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 3
+      ...Platform.select({
+        ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+        android: { elevation: 4 },
+      }),
     },
-    btnGhostText: {
-      color: theme.text,
+    btnText: {
       fontSize: 14,
-      fontWeight: "700"
-    },
-    btnSolidText: {
-      color: "#FFFFFF",
-      fontSize: 14,
-      fontWeight: "700"
+      fontWeight: "700",
     },
     lastChecked: {
-      marginTop: 16,
-      color: theme.textMuted,
+      marginTop: 12,
       fontSize: 11,
       textAlign: "center",
-      fontWeight: "500"
+      fontWeight: "500",
     },
 
-    // Quick Alerts Section
-    quickAlertsCard: {
+    // Alerts Card
+    alertsCard: {
       backgroundColor: theme.card,
+      borderRadius: 22,
+      padding: 18,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.line,
-      borderRadius: 24,
-      padding: 16,
       ...Platform.select({
-        ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8 },
-        android: { elevation: 2 }
-      })
+        ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 12 },
+        android: { elevation: 3 },
+      }),
     },
-    quickHeaderWrap: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center'
+    alertsHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 4,
     },
-    quickTitle: {
-      color: theme.text,
-      fontSize: 18,
+    sectionTitle: {
+      fontSize: 17,
       fontWeight: "800",
-      letterSpacing: -0.3
+      letterSpacing: -0.3,
     },
-    seeAllText: {
+    seeAll: {
       fontSize: 13,
-      fontWeight: "700"
+      fontWeight: "600",
     },
-    quickSubtitle: {
-      marginTop: 2,
-      marginBottom: 16,
-      color: theme.textSoft,
+    sectionSub: {
       fontSize: 13,
-      fontWeight: "500"
+      fontWeight: "400",
+      lineHeight: 18,
+      marginBottom: 12,
     },
     emptyState: {
-      alignItems: 'center',
-      paddingVertical: 20,
-      gap: 8
+      alignItems: "center",
+      paddingVertical: 24,
+      gap: 8,
     },
-    empty: {
-      color: theme.textSoft,
+    emptyText: {
       fontSize: 13,
-      fontWeight: "500"
+      fontWeight: "500",
     },
-    quickItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    alertRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
       borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: theme.line,
       paddingVertical: 12,
-      gap: 12
+      gap: 10,
     },
-    quickItemDot: {
+    alertDot: {
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: theme.warn || "#FF9500"
+      marginTop: 4,
+      flexShrink: 0,
     },
-    quickItemTitle: {
-      color: theme.text,
+    alertTitle: {
       fontSize: 14,
-      fontWeight: "700"
+      fontWeight: "700",
     },
-    quickItemText: {
+    alertMsg: {
+      fontSize: 12,
+      lineHeight: 17,
       marginTop: 2,
-      color: theme.textSoft,
-      fontSize: 13,
-      lineHeight: 18
-    }
+    },
   });
 
 export default memo(HomeScreen);

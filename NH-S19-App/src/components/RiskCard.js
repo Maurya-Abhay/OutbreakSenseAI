@@ -100,70 +100,75 @@ const createStyles = (theme) =>
   StyleSheet.create({
     card: {
       backgroundColor: theme.card,
-      borderRadius: 24,
-      padding: 20,
+      borderRadius: 28,
+      padding: 24,
       borderWidth: 1,
       borderColor: theme.line,
       ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 },
-        android: { elevation: 4 }
+        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 16 },
+        android: { elevation: 5 }
       })
     },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      marginBottom: 20
+      marginBottom: 24
     },
     aiBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 10,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.line,
     },
     aiBadgeText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '900',
-      letterSpacing: 0.5
+      letterSpacing: 0.6,
+      textTransform: 'uppercase'
     },
     title: {
       color: theme.text,
-      fontSize: 18,
+      fontSize: 20,
       fontWeight: "900",
-      letterSpacing: -0.5
+      letterSpacing: -0.6
     },
     subtitle: {
-      color: theme.textSoft,
-      fontSize: 12,
-      fontWeight: '500'
+      color: theme.textMuted,
+      fontSize: 13,
+      fontWeight: '600',
+      letterSpacing: 0.2
     },
     mainMetrics: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 20,
-      marginBottom: 24
+      gap: 22,
+      marginBottom: 28
     },
     scoreCircle: {
-      width: 120,
-      height: 120,
-      borderRadius: 60,
+      width: 130,
+      height: 130,
+      borderRadius: 65,
       borderWidth: 8,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.bg,
     },
     scoreValue: {
-      fontSize: 28,
+      fontSize: 32,
       fontWeight: '900',
-      lineHeight: 32
+      lineHeight: 36
     },
     metricLabel: {
-      fontSize: 9,
-      fontWeight: '800',
+      fontSize: 10,
+      fontWeight: '900',
       color: theme.textMuted,
-      letterSpacing: 1
+      letterSpacing: 1.2,
+      textTransform: 'uppercase'
     },
     levelTag: {
       position: 'absolute',
@@ -184,64 +189,69 @@ const createStyles = (theme) =>
     statMiniCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
-      padding: 12,
+      gap: 12,
+      padding: 14,
       backgroundColor: theme.bg,
-      borderRadius: 14,
+      borderRadius: 16,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.line
     },
     miniLabel: {
-      fontSize: 10,
+      fontSize: 11,
       color: theme.textMuted,
-      fontWeight: '700'
+      fontWeight: '800',
+      letterSpacing: 0.3
     },
     miniValue: {
-      fontSize: 15,
+      fontSize: 16,
       color: theme.text,
-      fontWeight: '800'
+      fontWeight: '900',
+      letterSpacing: -0.3
     },
     factorsSection: {
-      backgroundColor: theme.bg + '50',
-      padding: 16,
-      borderRadius: 16,
+      backgroundColor: theme.bg,
+      padding: 18,
+      borderRadius: 18,
       borderWidth: 1,
       borderColor: theme.line
     },
     sectionHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      marginBottom: 12
+      gap: 8,
+      marginBottom: 14
     },
     smallHeading: {
       color: theme.textMuted,
-      fontSize: 10,
-      fontWeight: "800",
-      letterSpacing: 0.5
+      fontSize: 11,
+      fontWeight: "900",
+      letterSpacing: 0.6,
+      textTransform: 'uppercase'
     },
     factorItem: {
-      marginBottom: 12
+      marginBottom: 14
     },
     factorLabelRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 6
+      marginBottom: 8
     },
     factorName: {
       color: theme.text,
-      fontSize: 12,
-      fontWeight: "700"
+      fontSize: 13,
+      fontWeight: "800",
+      letterSpacing: 0.1
     },
     factorValue: {
-      color: theme.textSoft,
-      fontSize: 11,
-      fontWeight: "800"
+      color: theme.textMuted,
+      fontSize: 12,
+      fontWeight: "900",
+      letterSpacing: 0.2
     },
     progressTrack: {
-      height: 6,
+      height: 8,
       backgroundColor: theme.line,
-      borderRadius: 3,
+      borderRadius: 4,
       overflow: 'hidden'
     },
     progressFill: {
@@ -253,9 +263,10 @@ const createStyles = (theme) =>
     },
     empty: {
       color: theme.textMuted,
-      fontSize: 12,
+      fontSize: 13,
       textAlign: 'center',
-      fontStyle: 'italic'
+      fontStyle: 'italic',
+      letterSpacing: 0.3
     }
   });
 

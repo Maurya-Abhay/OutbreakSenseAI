@@ -2,6 +2,8 @@ import dayjs from "dayjs";
 import Alert from "../models/Alert.js";
 import AlertSubscription from "../models/AlertSubscription.js";
 import Report from "../models/Report.js";
+import User from "../models/User.js";
+import DangerZone from "../models/DangerZone.js";
 import { buildReportsCsv, buildReportsPdf } from "../services/exportService.js";
 import {
   buildCacheKey,
@@ -119,7 +121,7 @@ export const getDashboardSummary = async (req, res, next) => {
       Report.countDocuments({ aiRiskLevel: "Medium" }),
       Alert.countDocuments({ isActive: true }),
       Report.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
-      Report.find().sort({ createdAt: -1 }).limit(10),
+      Report.find().sort({ createdAt: -1 }).limit(10).populate("verifiedBy", "name email"),
       Report.aggregate([
         {
           $group: {
@@ -168,6 +170,11 @@ export const getDashboardSummary = async (req, res, next) => {
         activeAlerts,
         reportsThisWeek
       },
+      // Mobile app fields
+      pendingReports: await Report.countDocuments({ submissionStatus: "pending" }),
+      activeDangerZones: await DangerZone.countDocuments({ status: "active" }),
+      totalUsers: await User.countDocuments(),
+      alertsThisWeek: reportsThisWeek,
       recentReports: recentReports.map((report) => ({
         id: report._id,
         locationName: report.locationName,
@@ -265,9 +272,307 @@ export const exportReportsPdf = async (req, res, next) => {
 
 export const listAlertSubscriptions = async (req, res, next) => {
   try {
-    const subscriptions = await AlertSubscription.find().sort({ createdAt: -1 }).limit(500);
-    return res.json({ subscriptions });
+    const page = Math.max(1, parseInt(req.query.page || "1", 10));
+    const limit = Math.min(100, parseInt(req.query.limit || "20", 10)); // Max 100 per page
+    const skip = (page - 1) * limit;
+
+    const [subscriptions, total] = await Promise.all([
+      AlertSubscription.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
+      AlertSubscription.countDocuments()
+    ]);
+
+    return res.json({
+      subscriptions,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     return next(error);
   }
 };
+
+// ─── User Management ──────────────────────────────────────────────────────────
+
+export const getSystemStats = async (req, res, next) => {
+  try {
+    const cacheKey = buildCacheKey("admin-system-stats");
+    const cached = getCacheValue(cacheKey);
+
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const [totalUsers, adminCount, citizenCount, totalReports, verifiedReports, activeAlerts] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ role: "admin" }),
+      User.countDocuments({ role: "citizen" }),
+      Report.countDocuments(),
+      Report.countDocuments({ isVerified: true }),
+      Alert.countDocuments({ isActive: true })
+    ]);
+
+    const sevenDaysAgo = dayjs().subtract(7, "day").toDate();
+    const reportsThisWeek = await Report.countDocuments({ createdAt: { $gte: sevenDaysAgo } });
+    const usersThisWeek = await User.countDocuments({ createdAt: { $gte: sevenDaysAgo } });
+
+    const payload = {
+      timestamp: new Date().toISOString(),
+      users: {
+        total: totalUsers,
+        admins: adminCount,
+        citizens: citizenCount,
+        newThisWeek: usersThisWeek
+      },
+      reports: {
+        total: totalReports,
+        verified: verifiedReports,
+        pendingVerification: totalReports - verifiedReports,
+        newThisWeek: reportsThisWeek
+      },
+      alerts: {
+        active: activeAlerts
+      },
+      health: {
+        status: "operational",
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    setCacheValue(cacheKey, payload, 30_000);
+    return res.json(payload);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getAllUsers = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || "1", 10));
+    const limit = Math.min(100, parseInt(req.query.limit || "20", 10));
+    const skip = (page - 1) * limit;
+    const role = req.query.role ? (req.query.role === "admin" ? "admin" : "citizen") : undefined;
+
+    const query = role ? { role } : {};
+    const [users, total] = await Promise.all([
+      User.find(query).select("-password").sort({ createdAt: -1 }).skip(skip).limit(limit),
+      User.countDocuments(query)
+    ]);
+
+    return res.json({
+      users: users.map(u => ({
+        id: u._id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        phone: u.phone || null,
+        location: u.location || null,
+        isVerified: u.isVerified,
+        isBanned: Boolean(u.isBanned),
+        banReason: u.banReason || null,
+        createdAt: u.createdAt
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getUserDetails = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Get user's reports count
+    const reportsCount = await Report.countDocuments({ createdBy: userId });
+
+    return res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone || null,
+      location: user.location || null,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+      reportsCount
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const banUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { reason } = req.body;
+
+    if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+      return res.status(400).json({ message: "Ban reason is required." });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          isBanned: true,
+          banReason: reason.trim().slice(0, 200),
+          bannedAt: new Date(),
+          bannedBy: req.user._id
+        }
+      },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    invalidateCacheByPrefix("admin");
+
+    return res.json({
+      message: "User banned successfully.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isBanned: user.isBanned
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const unbanUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: { isBanned: false },
+        $unset: { banReason: "", bannedAt: "", bannedBy: "" }
+      },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    invalidateCacheByPrefix("admin");
+
+    return res.json({
+      message: "User unbanned successfully.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isBanned: user.isBanned
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const deleteUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    // Prevent admins from deleting each other
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (targetUser.role === "admin" && targetUser._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Cannot delete other admin accounts." });
+    }
+
+    // Delete user's reports as well
+    await Report.deleteMany({ createdBy: userId });
+    await User.findByIdAndDelete(userId);
+
+    invalidateCacheByPrefix("admin");
+
+    return res.json({ message: "User and associated data deleted successfully." });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const grantAdminAccess = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: { role: "admin" } },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    invalidateCacheByPrefix("admin");
+
+    return res.json({
+      message: "Admin access granted.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const revokeAdminAccess = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: { role: "citizen" } },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    invalidateCacheByPrefix("admin");
+
+    return res.json({
+      message: "Admin access revoked.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+

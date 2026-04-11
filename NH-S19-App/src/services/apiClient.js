@@ -1,6 +1,13 @@
 import { NativeModules, Platform } from "react-native";
 import Constants from "expo-constants";
 
+// Will be set by AuthContext
+let globalAuthToken = null;
+
+export const setAuthToken = (token) => {
+  globalAuthToken = token;
+};
+
 const normalizeBaseUrl = (value) => String(value || "").replace(/\/+$/, "").trim();
 
 const DEFAULT_API_BASE_URL =
@@ -113,10 +120,21 @@ const parseJsonSafe = (raw) => {
  */
 export const request = async (path, options = {}) => {
   const timeoutMs = options.timeoutMs || 8000;
-  const endpointPath = path.startsWith("/") ? path : `/${path}`;
+  let endpointPath = path.startsWith("/") ? path : `/${path}`;
+  
+  // Add query parameters to the URL if provided
+  if (options.query && Object.keys(options.query).length > 0) {
+    const queryString = new URLSearchParams(options.query).toString();
+    endpointPath = `${endpointPath}?${queryString}`;
+  }
+  
+  const maxCandidates = Number.isFinite(options.maxCandidates)
+    ? Math.max(1, Number(options.maxCandidates))
+    : 0;
 
   // Hamesha pehle known-working URL try karein.
-  const candidates = unique([activeApiBaseUrl, ...buildApiCandidates()]);
+  const allCandidates = unique([activeApiBaseUrl, ...buildApiCandidates()]);
+  const candidates = maxCandidates > 0 ? allCandidates.slice(0, maxCandidates) : allCandidates;
 
   for (let i = 0; i < candidates.length; i++) {
     const baseUrl = candidates[i];
@@ -127,13 +145,20 @@ export const request = async (path, options = {}) => {
     const timeoutId = setTimeout(() => controller.abort(), currentTimeoutMs);
 
     try {
+      const headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        ...(options.headers || {})
+      };
+
+      // Add auth token if available
+      if (globalAuthToken) {
+        headers["Authorization"] = `Bearer ${globalAuthToken}`;
+      }
+
       const response = await fetch(`${baseUrl}${endpointPath}`, {
         method: options.method || "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          ...(options.headers || {})
-        },
+        headers,
         body: options.body ? JSON.stringify(options.body) : undefined,
         signal: controller.signal
       });
@@ -174,5 +199,7 @@ export const request = async (path, options = {}) => {
 
 export const apiClient = {
   get: (path, options = {}) => request(path, { ...options, method: "GET" }),
-  post: (path, body, options = {}) => request(path, { ...options, method: "POST", body })
+  post: (path, body, options = {}) => request(path, { ...options, method: "POST", body }),
+  put: (path, body, options = {}) => request(path, { ...options, method: "PUT", body }),
+  delete: (path, options = {}) => request(path, { ...options, method: "DELETE" })
 };

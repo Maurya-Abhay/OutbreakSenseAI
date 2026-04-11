@@ -6,7 +6,7 @@ let currentRoom = null; // Memory mein current location save rakhenge
 const normalizeLocationRoom = (locationName) => String(locationName || "").trim().toLowerCase();
 const normalizeSocketBaseUrl = (value) => String(value || "").replace(/\/+$/, "").replace(/\/api$/, "").trim();
 
-export const connectSocket = ({ baseUrl, onAlert, onReport, onConnectError }) => {
+export const connectSocket = ({ baseUrl, onAlert, onReport, onDangerZone, onConnectError }) => {
   const targetBaseUrl = normalizeSocketBaseUrl(baseUrl);
 
   if (!targetBaseUrl) {
@@ -15,7 +15,7 @@ export const connectSocket = ({ baseUrl, onAlert, onReport, onConnectError }) =>
 
   // 1. Agar socket already connected hai, toh naye listeners attach karke return karo
   if (socket?.connected) {
-    setupListeners(onAlert, onReport);
+    setupListeners(onAlert, onReport, onDangerZone);
     return socket;
   }
 
@@ -54,17 +54,18 @@ export const connectSocket = ({ baseUrl, onAlert, onReport, onConnectError }) =>
     console.log("🔌 Socket Disconnected:", reason);
   });
 
-  setupListeners(onAlert, onReport);
+  setupListeners(onAlert, onReport, onDangerZone);
 
   return socket;
 };
 
 // Helper function taaki listeners duplicate na ho
-const setupListeners = (onAlert, onReport) => {
+const setupListeners = (onAlert, onReport, onDangerZone) => {
   if (!socket) return;
 
   socket.off("alert:new"); // Purane listeners hatao
   socket.off("report:new");
+  socket.off("danger-zone:new");
 
   socket.on("alert:new", (payload) => {
     if (typeof onAlert === "function") onAlert(payload);
@@ -72,6 +73,10 @@ const setupListeners = (onAlert, onReport) => {
 
   socket.on("report:new", (payload) => {
     if (typeof onReport === "function") onReport(payload);
+  });
+
+  socket.on("danger-zone:new", (payload) => {
+    if (typeof onDangerZone === "function") onDangerZone(payload);
   });
 };
 

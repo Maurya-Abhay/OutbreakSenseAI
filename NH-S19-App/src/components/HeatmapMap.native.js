@@ -1,15 +1,6 @@
-import { memo, useMemo, useRef, useEffect } from "react";
-import { StyleSheet, Text, View, Platform } from "react-native";
-import MapView, { Circle, Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import { Ionicons } from "@expo/vector-icons";
-import { resolveRiskColor } from "../theme/palette";
-
-const defaultRegion = {
-  latitude: 23.8103,
-  longitude: 90.4125,
-  latitudeDelta: 0.1,
-  longitudeDelta: 0.1
-};
+import { memo } from "react";
+// react-native-maps removed - using web fallback instead
+import HeatmapMapFallback from "./HeatmapMap.web";
 
 const HeatmapMap = ({
   theme,
@@ -20,26 +11,111 @@ const HeatmapMap = ({
   onPickLocation,
   enableLocationPicker = false
 }) => {
-  const mapRef = useRef(null);
+  // Fallback: use web version on native since react-native-maps is not installed
+  return (
+    <HeatmapMapFallback
+      theme={theme}
+      points={points}
+      currentLocation={currentLocation}
+      selectedPoint={selectedPoint}
+      onSelectPoint={onSelectPoint}
+      onPickLocation={onPickLocation}
+      enableLocationPicker={enableLocationPicker}
+    />
+  );
+};
+
+export default memo(HeatmapMap);
+import { Fragment, memo } from "react";
+import { View } from "react-native";
+// import MapView, { Circle, Marker } from "react-native-maps";  // Commented: Removed react-native-maps
+import HeatmapMapFallback from "./HeatmapMap.web";
+
+const HeatmapMap = ({
+  theme,
+  points,
+  currentLocation,
+  selectedPoint,
+  onSelectPoint,
+  onPickLocation,
+  enableLocationPicker = false
+}) => {
+  // Fallback: use web version on native since react-native-maps is not installed
+  return (
+    <HeatmapMapFallback
+      theme={theme}
+      points={points}
+      currentLocation={currentLocation}
+      selectedPoint={selectedPoint}
+      onSelectPoint={onSelectPoint}
+      onPickLocation={onPickLocation}
+      enableLocationPicker={enableLocationPicker}
+    />
+  );
+};
+
+export default memo(HeatmapMap);
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const normalizedPoints = useMemo(() => {
+    if (!Array.isArray(points)) {
+      return [];
+    }
+
+    return points
+      .map((point) => {
+        const latitude = toFiniteNumber(point?.latitude);
+        const longitude = toFiniteNumber(point?.longitude);
+        if (!hasValidCoords(latitude, longitude)) {
+          return null;
+        }
+
+        return {
+          ...point,
+          latitude,
+          longitude,
+          averageRisk: Math.max(0, toFiniteNumber(point?.averageRisk) ?? 0)
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 250);
+  }, [points]);
+
+  const normalizedCurrentLocation = useMemo(() => {
+    const latitude = toFiniteNumber(currentLocation?.latitude);
+    const longitude = toFiniteNumber(currentLocation?.longitude);
+    if (!hasValidCoords(latitude, longitude)) {
+      return null;
+    }
+
+    return { latitude, longitude };
+  }, [currentLocation]);
+
+  const normalizedSelectedPoint = useMemo(() => {
+    const latitude = toFiniteNumber(selectedPoint?.latitude);
+    const longitude = toFiniteNumber(selectedPoint?.longitude);
+    if (!hasValidCoords(latitude, longitude)) {
+      return null;
+    }
+
+    return { latitude, longitude };
+  }, [selectedPoint]);
 
   // 🪄 Smooth Camera Transition
   useEffect(() => {
-    if (currentLocation?.latitude && mapRef.current) {
+    if (normalizedCurrentLocation?.latitude && mapRef.current) {
       mapRef.current.animateToRegion({
-        latitude: Number(currentLocation.latitude),
-        longitude: Number(currentLocation.longitude),
+        latitude: normalizedCurrentLocation.latitude,
+        longitude: normalizedCurrentLocation.longitude,
         latitudeDelta: 0.05,
         longitudeDelta: 0.05
       }, 1000);
     }
-  }, [currentLocation]);
+  }, [normalizedCurrentLocation]);
 
   return (
     <View style={styles.wrap}>
       <MapView
         ref={mapRef}
-        provider={PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={defaultRegion}
         showsPointsOfInterest={false}
@@ -54,16 +130,16 @@ const HeatmapMap = ({
         }}
       >
         {/* 🔥 Risk Zones (Circles & Markers) */}
-        {Array.isArray(points) && points.map((point, idx) => {
+        {normalizedPoints.map((point, idx) => {
           const riskLevel = String(point.riskLevel || "Low");
           const tone = resolveRiskColor(riskLevel, theme);
           const coords = {
-            latitude: Number(point.latitude),
-            longitude: Number(point.longitude)
+            latitude: point.latitude,
+            longitude: point.longitude
           };
 
           return (
-            <View key={point.id || `risk-${idx}`}>
+            <Fragment key={point.id || `risk-${idx}`}>
               <Circle
                 center={coords}
                 radius={Math.max(300, Number(point.averageRisk || 0) * 2000)}
@@ -82,16 +158,16 @@ const HeatmapMap = ({
                   <Ionicons name="warning" size={10} color="#FFF" />
                 </View>
               </Marker>
-            </View>
+            </Fragment>
           );
         })}
 
         {/* 📍 User Current Location Marker */}
-        {currentLocation?.latitude && (
+        {normalizedCurrentLocation && (
           <Marker
             coordinate={{
-              latitude: Number(currentLocation.latitude),
-              longitude: Number(currentLocation.longitude)
+              latitude: normalizedCurrentLocation.latitude,
+              longitude: normalizedCurrentLocation.longitude
             }}
             title="You are here"
             zIndex={10}
@@ -104,11 +180,11 @@ const HeatmapMap = ({
         )}
 
         {/* ✨ Manual Selection Marker */}
-        {selectedPoint?.latitude && (
+        {normalizedSelectedPoint && (
           <Marker
             coordinate={{
-              latitude: Number(selectedPoint.latitude),
-              longitude: Number(selectedPoint.longitude)
+              latitude: normalizedSelectedPoint.latitude,
+              longitude: normalizedSelectedPoint.longitude
             }}
             pinColor={theme.brand}
             zIndex={11}

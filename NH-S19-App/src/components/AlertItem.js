@@ -32,7 +32,7 @@ const AlertItem = ({ theme, alert, isLast }) => {
   return (
     <View style={[styles.container, isLast && styles.noBorder]}>
       {/* 🔴 Unread Dot Indicator */}
-      {!alert?.read && <View style={[styles.unreadDot, { backgroundColor: theme.blue || '#007AFF' }]} />}
+      {!alert?.read && <View style={[styles.unreadDot, { backgroundColor: theme.blue }]} />}
 
       <View style={[styles.iconWrap, { backgroundColor: `${levelColor}15` }]}>
         <Ionicons name={iconConfig.name} size={iconConfig.size} color={levelColor} />
@@ -63,10 +63,10 @@ const createStyles = (theme) =>
   StyleSheet.create({
     container: {
       flexDirection: "row",
-      paddingVertical: 14,
+      paddingVertical: 16,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: theme.line,
-      gap: 12,
+      gap: 14,
       position: 'relative'
     },
     noBorder: {
@@ -81,12 +81,12 @@ const createStyles = (theme) =>
       borderRadius: 3,
     },
     iconWrap: {
-      width: 36,
-      height: 36,
-      borderRadius: 12,
+      width: 44,
+      height: 44,
+      borderRadius: 14,
       alignItems: "center",
       justifyContent: "center",
-      marginTop: 2
+      marginTop: 0
     },
     content: {
       flex: 1,
@@ -100,34 +100,37 @@ const createStyles = (theme) =>
     },
     title: {
       color: theme.text,
-      fontSize: 14,
-      fontWeight: "700",
+      fontSize: 15,
+      fontWeight: "800",
       flex: 1,
-      marginRight: 8
+      marginRight: 10,
+      letterSpacing: 0.1
     },
     time: {
       color: theme.textMuted,
-      fontSize: 11,
-      fontWeight: "600"
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 0.2
     },
     message: {
       color: theme.textSoft,
       fontSize: 13,
-      lineHeight: 18,
-      fontWeight: "500"
+      lineHeight: 19,
+      fontWeight: "500",
+      letterSpacing: 0.2
     },
     locationTag: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      marginTop: 6
+      gap: 6,
+      marginTop: 8
     },
     locationText: {
       color: theme.textMuted,
       fontSize: 11,
-      fontWeight: "700",
+      fontWeight: "800",
       textTransform: 'uppercase',
-      letterSpacing: 0.3
+      letterSpacing: 0.4
     }
   });
 

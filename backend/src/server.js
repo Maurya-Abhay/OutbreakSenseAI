@@ -5,6 +5,7 @@ import connectDatabase from "./config/db.js";
 import config from "./config/env.js";
 import { ensureDefaultAdmin } from "./utils/adminBootstrap.js";
 import { resolveUserFromAuthorization, resolveUserFromToken } from "./middleware/auth.js";
+import { verifyEmailConfiguration } from "./services/emailService.js";
 
 const normalizeRoomKey = (locationName) =>
   String(locationName || "")
@@ -17,6 +18,7 @@ const normalizeRoomKey = (locationName) =>
 const startServer = async () => {
   await connectDatabase();
   await ensureDefaultAdmin();
+  await verifyEmailConfiguration();
 
   const server = http.createServer(app);
 
@@ -41,7 +43,8 @@ const startServer = async () => {
 
       socket.data.user = user || null;
       return next();
-    } catch {
+    } catch (error) {
+      console.error("Socket auth error:", error.message);
       socket.data.user = null;
       return next();
     }
@@ -74,6 +77,10 @@ const startServer = async () => {
       socket.leave(`location:${roomKey}`);
     });
 
+    socket.on("error", (error) => {
+      console.error(`Socket error for ${socket.id}:`, error);
+    });
+
     socket.on("disconnect", () => {
       console.log(`Socket disconnected: ${socket.id}`);
     });
@@ -81,9 +88,33 @@ const startServer = async () => {
 
   app.set("io", io);
 
-  server.listen(config.port, () => {
-    console.log(`OutbreakSense backend running on http://localhost:${config.port}`);
+  const httpServer = server.listen(config.port, () => {
+    console.log(`✅ OutbreakSense backend running on http://localhost:${config.port}`);
   });
+
+  const gracefulShutdown = async (signal) => {
+    console.log(`\n📊 Received ${signal}, starting graceful shutdown...`);
+    
+    httpServer.close(() => {
+      console.log("✅ HTTP server closed");
+    });
+
+    io.close();
+    console.log("✅ Socket.IO connections closed");
+
+    try {
+      await import("mongoose").then(m => m.default.disconnect());
+      console.log("✅ MongoDB disconnected");
+    } catch (error) {
+      console.error("Error disconnecting MongoDB:", error.message);
+    }
+
+    console.log("✅ Graceful shutdown complete");
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 };
 
 startServer().catch((error) => {

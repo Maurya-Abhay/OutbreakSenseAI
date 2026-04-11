@@ -77,48 +77,49 @@ const createStyles = (theme) =>
   StyleSheet.create({
     card: {
       backgroundColor: theme.card,
-      borderRadius: 24,
-      padding: 16,
+      borderRadius: 28,
+      padding: 20,
       borderWidth: 1,
       borderColor: theme.line,
       ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
-        android: { elevation: 2 }
+        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 16 },
+        android: { elevation: 5 }
       })
     },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      marginBottom: 20
+      marginBottom: 24
     },
     title: {
       color: theme.text,
-      fontSize: 17,
+      fontSize: 19,
       fontWeight: "900",
-      letterSpacing: -0.5
+      letterSpacing: -0.6
     },
     subtitle: {
-      marginTop: 2,
-      color: theme.textSoft,
-      fontSize: 12,
-      fontWeight: '500'
+      marginTop: 4,
+      color: theme.textMuted,
+      fontSize: 13,
+      fontWeight: '600',
+      letterSpacing: 0.2
     },
     chartBody: {
-      gap: 14
+      gap: 16
     },
     row: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 10
+      gap: 12
     },
     labelWrap: {
-      width: 65,
+      width: 70,
     },
     label: {
       color: theme.textMuted,
-      fontSize: 11,
-      fontWeight: "800",
+      fontSize: 12,      fontWeight: '800',
+      letterSpacing: 0.2,      fontWeight: "800",
       textTransform: 'uppercase'
     },
     barTrack: {
@@ -132,10 +133,10 @@ const createStyles = (theme) =>
     },
     barFill: {
       height: "100%",
-      borderRadius: 5,
+      borderRadius: 5
     },
     valueWrap: {
-      width: 40,
+      width: 55,
       alignItems: 'flex-end'
     },
     value: {

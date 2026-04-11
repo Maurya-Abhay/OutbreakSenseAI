@@ -1,7 +1,27 @@
 import { memo, useMemo } from "react";
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AlertItem from "../components/AlertItem";
+
+const StatPill = ({ label, value, accent, theme, styles }) => (
+  <View
+    style={[
+      styles.statPill,
+      { borderColor: accent ? accent + "40" : theme.line, backgroundColor: accent ? accent + "10" : theme.cardElevated },
+    ]}
+  >
+    <Text style={[styles.statLabel, { color: accent || theme.textSoft }]}>{label}</Text>
+    <Text style={[styles.statValue, { color: accent || theme.text }]}>{value}</Text>
+  </View>
+);
 
 const AlertsScreen = ({
   theme,
@@ -12,111 +32,146 @@ const AlertsScreen = ({
   onClearAlerts,
   onRefreshAlerts,
   isOffline,
-  usingCachedData
+  usingCachedData,
 }) => {
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const primaryColor = theme.blue || theme.brand || "#007AFF";
+  const brand  = theme.brand   || "#3182ce";
+  const warn   = theme.warning || "#dd6b20";
+  const danger = theme.danger  || "#e53e3e";
 
   return (
-    <ScrollView 
+    <ScrollView
       contentContainerStyle={styles.body}
       showsVerticalScrollIndicator={false}
     >
-      {/* ⚠️ Native Style Banners */}
+      {/* Offline Banner */}
       {isOffline && (
-        <View style={styles.bannerOffline}>
-          <View style={styles.bannerIconWrapWarning}>
-            <Ionicons name="cloud-offline" size={16} color={theme.warn || "#FF9500"} />
+        <View style={[styles.banner, { borderColor: warn + "50" }]}>
+          <View style={[styles.bannerIconWrap, { backgroundColor: warn + "18" }]}>
+            <Ionicons name="cloud-offline-outline" size={15} color={warn} />
           </View>
-          <Text style={styles.bannerText}>Offline mode active. Showing saved feed.</Text>
+          <Text style={[styles.bannerText, { color: theme.text }]}>
+            Offline mode — showing saved feed.
+          </Text>
         </View>
       )}
 
-      {/* 📊 Premium Header Card */}
-      <View style={styles.headCard}>
+      {/* Header Card */}
+      <View style={[styles.headCard, { backgroundColor: theme.card, borderColor: theme.line }]}>
         <View style={styles.headTop}>
-          <View>
-            <Text style={[styles.kicker, { color: primaryColor }]}>COMMUNITY SIGNALS</Text>
-            <Text style={styles.title}>Alerts Center</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.kicker, { color: brand }]}>COMMUNITY SIGNALS</Text>
+            <Text style={[styles.title, { color: theme.text }]}>Alerts Center</Text>
           </View>
-          <View style={[styles.pulseContainer, { backgroundColor: isOffline ? theme.line : '#34C75920' }]}>
-            <View style={[styles.pulseDot, { backgroundColor: isOffline ? theme.textMuted : '#34C759' }]} />
-            <Text style={[styles.pulseText, { color: isOffline ? theme.textSoft : '#34C759' }]}>
-              {isOffline ? "Offline" : "Live Feed"}
+          <View
+            style={[
+              styles.livePill,
+              {
+                backgroundColor: isOffline ? theme.cardElevated : brand + "12",
+                borderColor:     isOffline ? theme.line         : brand + "35",
+              },
+            ]}
+          >
+            <View style={[styles.liveDot, { backgroundColor: isOffline ? theme.textSoft : brand }]} />
+            <Text style={[styles.liveText, { color: isOffline ? theme.textSoft : brand }]}>
+              {isOffline ? "Offline" : "Live"}
             </Text>
           </View>
         </View>
-        
-        <Text style={styles.subtitle}>
+
+        <Text style={[styles.subtitle, { color: theme.textSoft }]}>
           Realtime outbreak signals, citizen reports, and AI risk updates.
         </Text>
 
-        {/* Improved Stats Row */}
+        {/* Stats Row */}
         <View style={styles.statsRow}>
-          <View style={styles.statPill}>
-            <Text style={styles.statLabel}>Total</Text>
-            <Text style={styles.statValue}>{alertsFeed.length}</Text>
-          </View>
-          <View style={[styles.statPill, { backgroundColor: unreadAlerts > 0 ? theme.danger + '15' : theme.brandSoft }]}>
-            <Text style={[styles.statLabel, unreadAlerts > 0 && { color: theme.danger }]}>New</Text>
-            <Text style={[styles.statValue, unreadAlerts > 0 && { color: theme.danger }]}>{unreadAlerts}</Text>
-          </View>
-          <View style={styles.statPill}>
-            <Text style={styles.statLabel}>Sync</Text>
-            <Ionicons name={isOffline ? "cloud-offline" : "cloud-done"} size={14} color={theme.textSoft} style={{ marginTop: 2 }} />
-          </View>
+          <StatPill label="Total"  value={String(alertsFeed.length)} theme={theme} styles={styles} />
+          <StatPill
+            label="Unread"
+            value={String(unreadAlerts)}
+            accent={unreadAlerts > 0 ? danger : undefined}
+            theme={theme}
+            styles={styles}
+          />
+          <StatPill
+            label="Status"
+            value={isOffline ? "Cached" : "Synced"}
+            accent={isOffline ? warn : undefined}
+            theme={theme}
+            styles={styles}
+          />
         </View>
 
-        {/* Premium Action Row */}
+        {/* Action Buttons */}
         <View style={styles.actionRow}>
-          <Pressable onPress={onMarkAllRead} style={[styles.btn, styles.btnGhost]}>
-            <Ionicons name="checkmark-done" size={16} color={theme.text} style={styles.btnIcon} />
-            <Text style={styles.btnGhostText}>Read All</Text>
-          </Pressable>
-          
-          <Pressable onPress={onClearAlerts} style={[styles.btn, styles.btnGhost]}>
-            <Ionicons name="trash-outline" size={16} color={theme.text} style={styles.btnIcon} />
-            <Text style={styles.btnGhostText}>Clear</Text>
+          <Pressable
+            onPress={onMarkAllRead}
+            style={[styles.btn, styles.btnGhost]}
+          >
+            <Ionicons name="checkmark-done-outline" size={15} color={theme.text} />
+            <Text style={[styles.btnText, { color: theme.text }]}>Read All</Text>
           </Pressable>
 
-          <Pressable onPress={onRefreshAlerts} style={[styles.btn, styles.btnSolid, { backgroundColor: primaryColor }]}>
+          <Pressable
+            onPress={onClearAlerts}
+            style={[styles.btn, styles.btnGhost]}
+          >
+            <Ionicons name="trash-outline" size={15} color={theme.text} />
+            <Text style={[styles.btnText, { color: theme.text }]}>Clear</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={onRefreshAlerts}
+            style={[styles.btn, styles.btnSolid, { backgroundColor: brand }]}
+          >
             {mapLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color="#fff" size="small" />
             ) : (
               <>
-                <Ionicons name="sync" size={16} color="#FFFFFF" style={styles.btnIcon} />
-                <Text style={styles.btnSolidText}>Refresh</Text>
+                <Ionicons name="sync-outline" size={15} color="#fff" />
+                <Text style={[styles.btnText, { color: "#fff" }]}>Refresh</Text>
               </>
             )}
           </Pressable>
         </View>
       </View>
 
-      {/* 🔔 Alert Feed List */}
-      <View style={styles.feedCard}>
+      {/* Feed Card */}
+      <View style={[styles.feedCard, { backgroundColor: theme.card, borderColor: theme.line }]}>
         <View style={styles.feedHeader}>
-          <Ionicons name="list" size={18} color={theme.textSoft} />
-          <Text style={styles.feedTitle}>Recent Updates</Text>
-        </View>
-
-        {!alertsFeed.length ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="notifications-off-outline" size={48} color={theme.line} />
-            <Text style={styles.empty}>All quiet for now. No alerts to show.</Text>
+          <View style={[styles.feedIconWrap, { backgroundColor: theme.cardElevated }]}>
+            <Ionicons name="list-outline" size={15} color={theme.textSoft} />
           </View>
-        ) : null}
-
-        <View style={styles.listContainer}>
-          {alertsFeed.map((alert, index) => (
-            <AlertItem 
-              key={alert.id} 
-              theme={theme} 
-              alert={alert} 
-              isLast={index === alertsFeed.length - 1} 
-            />
-          ))}
+          <Text style={[styles.feedTitle, { color: theme.text }]}>Recent Updates</Text>
+          {alertsFeed.length > 0 && (
+            <View style={[styles.countBadge, { backgroundColor: brand + "15", borderColor: brand + "30" }]}>
+              <Text style={[styles.countBadgeText, { color: brand }]}>{alertsFeed.length}</Text>
+            </View>
+          )}
         </View>
+
+        {alertsFeed.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="notifications-off-outline" size={36} color={theme.textSoft} />
+            <Text style={[styles.emptyText, { color: theme.textSoft }]}>
+              All quiet. No alerts to show.
+            </Text>
+          </View>
+        ) : (
+          <View>
+            {alertsFeed.map((alert, index) => (
+              <AlertItem
+                key={alert.id}
+                theme={theme}
+                alert={alert}
+                isLast={index === alertsFeed.length - 1}
+              />
+            ))}
+          </View>
+        )}
       </View>
+
+      <View style={{ height: 100 }} />
     </ScrollView>
   );
 };
@@ -125,194 +180,192 @@ const createStyles = (theme) =>
   StyleSheet.create({
     body: {
       paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: 120, // Tab bar safety space
-      gap: 16
+      paddingTop: 18,
+      paddingBottom: 0,
+      gap: 16,
     },
-    // Banners (Same as Home for consistency)
-    bannerOffline: {
+
+    // Banner
+    banner: {
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
-      borderRadius: 14,
       backgroundColor: theme.card,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.warn || "#FF9500",
+      borderRadius: 14,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 11,
     },
-    bannerIconWrapWarning: {
-      backgroundColor: (theme.warn || "#FF9500") + '20',
-      padding: 6,
-      borderRadius: 8
+    bannerIconWrap: {
+      width: 30,
+      height: 30,
+      borderRadius: 8,
+      alignItems: "center",
+      justifyContent: "center",
     },
     bannerText: {
       flex: 1,
-      color: theme.text,
       fontSize: 13,
-      fontWeight: "600"
+      fontWeight: "500",
     },
 
     // Head Card
     headCard: {
-      backgroundColor: theme.card,
-      borderRadius: 24,
-      padding: 20,
+      borderRadius: 22,
+      padding: 18,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.line,
       ...Platform.select({
-        ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10 },
-        android: { elevation: 3 }
-      })
+        ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14 },
+        android: { elevation: 4 },
+      }),
     },
     headTop: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: 8
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 6,
     },
     kicker: {
       fontSize: 10,
-      fontWeight: "800",
+      fontWeight: "700",
       letterSpacing: 1.5,
-      marginBottom: 2
+      marginBottom: 4,
     },
     title: {
-      color: theme.text,
       fontSize: 24,
-      fontWeight: "900",
-      letterSpacing: -0.5
+      fontWeight: "800",
+      letterSpacing: -0.5,
     },
     subtitle: {
-      color: theme.textSoft,
       fontSize: 13,
-      lineHeight: 18,
-      marginBottom: 20,
-      fontWeight: "500"
+      lineHeight: 19,
+      fontWeight: "400",
+      marginBottom: 16,
     },
-    
-    // Pulse Indicator
-    pulseContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    livePill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
       paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 12,
-      gap: 6
+      paddingVertical: 6,
+      borderRadius: 20,
+      borderWidth: 1,
     },
-    pulseDot: {
+    liveDot: {
       width: 6,
       height: 6,
       borderRadius: 3,
     },
-    pulseText: {
+    liveText: {
       fontSize: 11,
       fontWeight: "700",
-      textTransform: 'uppercase'
+      letterSpacing: 0.3,
     },
 
     // Stats
     statsRow: {
       flexDirection: "row",
       gap: 10,
-      marginBottom: 20
+      marginBottom: 16,
     },
     statPill: {
       flex: 1,
-      backgroundColor: theme.bg,
-      borderRadius: 16,
+      borderRadius: 14,
       padding: 12,
-      alignItems: 'center',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.line
+      alignItems: "center",
+      borderWidth: 1,
+      gap: 4,
     },
     statLabel: {
-      color: theme.textSoft,
-      fontSize: 11,
-      fontWeight: "700",
-      textTransform: 'uppercase',
-      marginBottom: 4
+      fontSize: 10,
+      fontWeight: "600",
+      letterSpacing: 0.5,
     },
     statValue: {
-      color: theme.text,
       fontSize: 18,
-      fontWeight: "800"
+      fontWeight: "800",
+      letterSpacing: -0.3,
     },
 
-    // Actions
+    // Buttons
     actionRow: {
       flexDirection: "row",
-      gap: 8
+      gap: 8,
     },
     btn: {
       flex: 1,
-      minHeight: 46,
-      borderRadius: 14,
-      flexDirection: 'row',
+      height: 46,
+      borderRadius: 13,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+    },
+    btnGhost: {
+      borderWidth: 1,
+      borderColor: theme.line,
+      backgroundColor: theme.cardElevated,
+    },
+    btnSolid: {
+      ...Platform.select({
+        ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+        android: { elevation: 4 },
+      }),
+    },
+    btnText: {
+      fontSize: 13,
+      fontWeight: "700",
+    },
+
+    // Feed Card
+    feedCard: {
+      borderRadius: 22,
+      padding: 18,
+      borderWidth: StyleSheet.hairlineWidth,
+      ...Platform.select({
+        ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 12 },
+        android: { elevation: 3 },
+      }),
+    },
+    feedHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 14,
+    },
+    feedIconWrap: {
+      width: 30,
+      height: 30,
+      borderRadius: 8,
       alignItems: "center",
       justifyContent: "center",
     },
-    btnIcon: {
-      marginRight: 6
-    },
-    btnGhost: {
-      backgroundColor: theme.bg,
-      borderWidth: 1,
-      borderColor: theme.line
-    },
-    btnSolid: {
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 2
-    },
-    btnGhostText: {
-      color: theme.text,
-      fontSize: 13,
-      fontWeight: "700"
-    },
-    btnSolidText: {
-      color: "#FFFFFF",
-      fontSize: 13,
-      fontWeight: "700"
-    },
-
-    // Feed Section
-    feedCard: {
-      backgroundColor: theme.card,
-      borderRadius: 24,
-      padding: 20,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.line,
-    },
-    feedHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 16
-    },
     feedTitle: {
-      color: theme.text,
-      fontSize: 18,
+      fontSize: 17,
       fontWeight: "800",
-      letterSpacing: -0.3
+      letterSpacing: -0.3,
+      flex: 1,
     },
-    listContainer: {
-      marginTop: 4
+    countBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+      borderWidth: 1,
     },
-    emptyContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 40,
-      gap: 12
+    countBadgeText: {
+      fontSize: 11,
+      fontWeight: "700",
     },
-    empty: {
-      color: theme.textSoft,
-      fontSize: 14,
-      fontWeight: "500",
-      textAlign: 'center'
-    }
+    emptyState: {
+      alignItems: "center",
+      paddingVertical: 30,
+      gap: 10,
+    },
+    emptyText: {
+      fontSize: 13,
+      fontWeight: "400",
+      textAlign: "center",
+    },
   });
 
 export default memo(AlertsScreen);

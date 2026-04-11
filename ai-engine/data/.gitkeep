@@ -1,0 +1,3 @@
+# AI Engine data directory
+# Model is trained once and saved to model/risk_model.joblib
+# Training data (CSV) is not committed - model is pre-trained and ready for production
