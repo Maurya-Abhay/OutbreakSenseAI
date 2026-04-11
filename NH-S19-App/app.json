@@ -4,37 +4,16 @@
     "slug": "outbreaksense-ai",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo.svg",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/logo.svg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.outbreaksense.ai",
-      "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "We need your location to show risk zones nearby.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "We need your location for real-time risk alerts.",
-        "NSCameraUsageDescription": "Camera access is needed for expanded functionality."
-      }
-    },
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/logo.svg",
-        "monochromeImage": "./assets/logo.svg"
-      },
       "package": "com.outbreaksense.ai",
-      "permissions": [
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.INTERNET"
-      ]
-    },
-    "web": {
-      "favicon": "./assets/logo.svg"
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
     },
     "extra": {
       "eas": {
