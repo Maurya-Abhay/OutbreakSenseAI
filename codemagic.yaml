@@ -5,23 +5,20 @@ workflows:
     max_build_duration: 120
     environment:
       java: 11
-      ndk: r21e
-      vars:
-        JAVA_HOME: "/Library/Java/JavaVirtualMachines/temurin-11.jdk/Contents/Home"
     scripts:
       - name: Install dependencies
         script: |
           npm install --legacy-peer-deps
-      - name: Install Expo CLI
-        script: |
-          npm install -g expo-cli
-      - name: Prebuild
+      - name: Install Expo and Prebuild
         script: |
           cd NH-S19-App
+          npm install -g expo-cli
           npx expo prebuild -p android --clean --non-interactive
-      - name: Build APK
+      - name: Build with Gradle
         script: |
           cd NH-S19-App/android
+          chmod +x gradlew
+          ./gradlew --version
           ./gradlew assembleDebug
     artifacts:
       - NH-S19-App/android/app/build/outputs/apk/debug/*.apk
