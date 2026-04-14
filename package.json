@@ -22,9 +22,16 @@
     "start:mobile": "npm run start:app",
     "start:mobile:tunnel": "npm --prefix NH-S19-App run start:tunnel",
     "start:backend+app": "node scripts/start-backend-mobile.cjs",
-    "start:backend+mobile": "npm run start:backend+app"
+    "start:backend+mobile": "npm run start:backend+app",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "expo": "~54.0.33",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
   }
 }

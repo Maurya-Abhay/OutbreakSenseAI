@@ -3,10 +3,15 @@
     "version": ">= 5.0.0"
   },
   "build": {
-    "preview": {
+    "production": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "resourceClass": "default",
+      "cache": {
+        "disabled": true
       },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://outbreaksense-backend.onrender.com/api",
