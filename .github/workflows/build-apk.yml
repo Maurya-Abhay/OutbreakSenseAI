@@ -27,28 +27,28 @@ jobs:
       uses: android-actions/setup-android@v3
       with:
         api-levels: '34'
-        ndk-version: 'r21e'
     
     - name: Install dependencies
       run: |
+        cd NH-S19-App
         npm install --legacy-peer-deps
     
-    - name: Install Expo CLI
-      run: npm install -g expo-cli
-    
-    - name: Prebuild Android
-      working-directory: ./NH-S19-App
+    - name: Create prebuild
       run: |
-        npx expo prebuild -p android --clean --non-interactive
+        cd NH-S19-App
+        npm list expo
+        npx expo-cli prebuild -p android --clean
+      continue-on-error: true
     
     - name: Build APK
-      working-directory: ./NH-S19-App/android
       run: |
+        cd NH-S19-App/android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug --no-daemon
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: app-debug.apk
         path: NH-S19-App/android/app/build/outputs/apk/debug/app-debug.apk
@@ -56,12 +56,10 @@ jobs:
     
     - name: Create Release
       if: success()
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
+      with:
+        files: NH-S19-App/android/app/build/outputs/apk/debug/app-debug.apk
+        tag_name: apk-${{ github.run_number }}
+        body: 'APK Build Success ✅'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: build-${{ github.run_number }}
-        release_name: Android APK Build ${{ github.run_number }}
-        body: 'APK built successfully from commit ${{ github.sha }}'
-        draft: false
-        prerelease: false
