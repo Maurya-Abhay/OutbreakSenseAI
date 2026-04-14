@@ -1,20 +1,32 @@
 workflows:
   android-workflow:
-    name: Android Workflow
+    name: Build Android APK
     instance_type: mac_mini_m2
-    max_build_duration: 30
+    max_build_duration: 60
     environment:
-      android_signing:
-        - outbreaksense_key
-      vars:
-        PACKAGE_NAME: "com.outbreaksense.ai"
+      java: default
+      ndk: r21e
     scripts:
       - name: Install dependencies
         script: |
-          npm install
-      - name: Build APK
+          npm install --legacy-peer-deps
+      - name: Install Expo CLI
+        script: |
+          npm install -g expo-cli
+      - name: Prebuild
         script: |
           cd NH-S19-App
-          eas build -p android --local
+          npx expo prebuild -p android --clean --non-interactive
+      - name: Build APK
+        script: |
+          cd NH-S19-App/android
+          ./gradlew assembleDebug
     artifacts:
-      - build/**/*.apk
+      - NH-S19-App/android/app/build/outputs/apk/debug/*.apk
+    publishing:
+      email:
+        recipients:
+          - workdocing3@gmail.com
+        notify:
+          success: true
+          failure: true
