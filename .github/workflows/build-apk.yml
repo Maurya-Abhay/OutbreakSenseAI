@@ -11,11 +11,8 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        submodules: recursive
     
     - name: Setup Java
       uses: actions/setup-java@v4
@@ -28,38 +25,15 @@ jobs:
       with:
         api-levels: '34'
     
-    - name: Install dependencies
-      run: |
-        cd NH-S19-App
-        npm install --legacy-peer-deps
-    
-    - name: Create prebuild
-      run: |
-        cd NH-S19-App
-        npm list expo
-        npx expo-cli prebuild -p android --clean
-      continue-on-error: true
-    
     - name: Build APK
       run: |
         cd NH-S19-App/android
         chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon
+        ./gradlew assembleDebug --no-daemon --info 2>&1 | tail -100
     
-    - name: Upload APK
+    - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: app-debug.apk
+        name: OutbreakSenseAI-debug
         path: NH-S19-App/android/app/build/outputs/apk/debug/app-debug.apk
-        retention-days: 30
-    
-    - name: Create Release
-      if: success()
-      uses: softprops/action-gh-release@v1
-      with:
-        files: NH-S19-App/android/app/build/outputs/apk/debug/app-debug.apk
-        tag_name: apk-${{ github.run_number }}
-        body: 'APK Build Success ✅'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
