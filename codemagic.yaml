@@ -1,0 +1,20 @@
+workflows:
+  android-workflow:
+    name: Android Workflow
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      android_signing:
+        - outbreaksense_key
+      vars:
+        PACKAGE_NAME: "com.outbreaksense.ai"
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm install
+      - name: Build APK
+        script: |
+          cd NH-S19-App
+          eas build -p android --local
+    artifacts:
+      - build/**/*.apk
