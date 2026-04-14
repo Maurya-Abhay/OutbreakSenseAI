@@ -2,10 +2,12 @@ workflows:
   android-workflow:
     name: Build Android APK
     instance_type: mac_mini_m2
-    max_build_duration: 60
+    max_build_duration: 120
     environment:
-      java: default
+      java: 11
       ndk: r21e
+      vars:
+        JAVA_HOME: "/Library/Java/JavaVirtualMachines/temurin-11.jdk/Contents/Home"
     scripts:
       - name: Install dependencies
         script: |
